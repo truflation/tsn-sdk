@@ -1,0 +1,901 @@
+// This file is the template to be used by Data Providers to deploy their own contracts.
+// A stream must conform to this same interface (read and permissions) to be eligible to officialization from our
+// accepted System Streams.
+
+database composed_stream_db_name;
+
+table taxonomies {
+    child_stream_id     text    notnull,
+    child_data_provider text    notnull,
+    weight              decimal(21,3)   notnull,
+    created_at          int     notnull,    //  block height
+    disabled_at         int,                //  block height
+    version             int     notnull,
+
+    #identifier_idx   primary(version, child_data_provider, child_stream_id)
+}
+
+table metadata {
+    row_id      uuid    primary notnull,
+    metadata_key         text    notnull,
+    value_i     int,                 // integer type
+    value_f     decimal(21,3),       // float type
+    value_b     bool,                // boolean type
+    value_s     text,                // string type
+    value_ref   text,                // indexed string type -- lowercase
+    created_at  int     notnull,     // block height
+    disabled_at int,                 // block height
+
+    #key_idx        index(metadata_key),
+    #ref_idx        index(value_ref),
+    #created_idx    index(created_at) // faster sorting
+}
+
+foreign procedure ext_get_data($date_from text, $date_to text, $frozen_at int) returns table(
+    date_value text,
+    value decimal(21,3)
+)
+
+procedure stream_exists($data_provider text, $stream_id text) public view returns (result bool) {
+    $dbid text := generate_dbid($data_provider, $stream_id);
+
+    for $row in SELECT * FROM get_metadata('type', true, null) {
+        return true;
+    }
+
+    return false;
+}
+
+procedure generate_dbid($data_provider text, $stream_id text) private view returns (result text) {
+    $starts_with_0x bool := false;
+    for $row in SELECT $data_provider LIKE '0x%' as a {
+        $starts_with_0x := $row.a;
+    }
+
+    $data_provider_without_0x text;
+
+    if $starts_with_0x == true {
+        // TODO: once substring, left or right function is supported, we can remove this
+        // for $row in SELECT substr($data_provider, 2) as a {
+        //     $data_provider_without_0x := $row.a;
+        // }
+        error('data provider should not start with 0x');
+    } else {
+        $data_provider_without_0x := $data_provider;
+    }
+
+    $encoded_stream_id := encode(lower($stream_id)::blob, 'hex');
+
+    for $row2 in SELECT
+    'x' || encode(
+        digest(
+                decode($encoded_stream_id || $data_provider_without_0x, 'hex'),
+                'sha224'
+        ),
+        'hex'
+       ) AS dbid {
+           return $row2.dbid;
+       }
+
+    error('could not generate dbid');
+}
+
+// It returns every record value for every date as its own
+// row. e.g.:
+// 2020-06-01, 100
+// 2020-06-01, 140
+// 2020-06-02, 103
+// 2020-06-02, 143
+procedure get_raw_record($date_from text, $date_to text, $frozen_at int) private view returns table(
+    date_value text,
+    value decimal(21,3),
+    taxonomy_index int
+) {
+    // arrays are 1-indexed, so we match that
+    $taxonomy_index int := 0;
+    for $row2 in SELECT * FROM describe_taxonomies(true) {
+        $taxonomy_index := $taxonomy_index + 1;
+        $dbid text := generate_dbid($row2.child_data_provider, $row2.child_stream_id);
+        for $row3 in SELECT * FROM ext_get_data[$dbid, 'get_record']($date_from, $date_to, $frozen_at) {
+            return next $row3.date_value, $row3.value, $taxonomy_index;
+        }
+    }
+}
+
+// It returns every index value for every date as its own
+// row. e.g.:
+// 2020-06-01, 100
+// 2020-06-01, 140
+// 2020-06-02, 103
+// 2020-06-02, 143
+procedure get_raw_index($date_from text, $date_to text, $frozen_at int) private view returns table(
+    date_value text,
+    value decimal(21,3),
+    taxonomy_index int
+) {
+    // arrays are 1-indexed, so we match that
+    $taxonomy_index int := 0;
+    for $row2 in SELECT * FROM describe_taxonomies(true) {
+        $taxonomy_index := $taxonomy_index + 1;
+        $dbid text := generate_dbid($row2.child_data_provider, $row2.child_stream_id);
+        for $row3 in SELECT * FROM ext_get_data[$dbid, 'get_index']($date_from, $date_to, $frozen_at) {
+            return next $row3.date_value, $row3.value, $taxonomy_index;
+        }
+    }
+}
+
+// get_record_filled retrieves the filled records for a specified date range
+// and fills the gaps with the last known value for each taxonomy
+// if the last known value is not available, it will not emit the record, making it a sparse table
+procedure get_record_filled($date_from text, $date_to text, $frozen_at int) private view returns table(
+    date_value text,
+    value_with_weight decimal(21,3), // value * weight
+    // we also return the weight, so we can calculate the total weight for a date
+    weight decimal(21,3)
+) {
+    // Initialize taxonomy variables
+    $taxonomy_count int := 0;
+    $taxonomy_weight_list decimal(21,3)[];
+    $last_values decimal(21,3)[];
+
+    // Fetch taxonomy details
+    for $row in SELECT * FROM describe_taxonomies(true) {
+        $taxonomy_count := $taxonomy_count + 1;
+        $taxonomy_weight_list := array_append($taxonomy_weight_list, $row.weight);
+        $last_values := array_append($last_values, null::decimal(21,3));
+    }
+
+    // Initialize last values array with null values
+    // arrays are 1-indexed, so we match that
+    $current_taxonomy_index int := 0;
+    $expected_next_taxonomy_index int := 1;
+    $we_are_in_a_new_loop bool := false;
+    $reached_requested_range bool := false;
+    $prev_loop_date text := '';
+
+   // what could make this process easier:
+   // - assign values to specific indexes in the array (set_array_element)
+   // - use a map to store the last values, so we can easily check if a value is null
+   // - better manipulation of tables as objects, then we could modify a table to
+   //   fill forward without needing to return immediately on each loop
+
+    // Iterate through the records and process them
+    for $row_raw in SELECT date_value, value, taxonomy_index FROM get_raw_record($date_from, $date_to, $frozen_at) as r
+    ORDER BY r.date_value ASC, r.taxonomy_index ASC {
+
+        // Update the last values array with the current value
+        $current_taxonomy_index := $row_raw.taxonomy_index;
+
+        // Check if we are in a new loop
+        if $prev_loop_date != $row_raw.date_value {
+            $we_are_in_a_new_loop := true;
+        } else {
+            $we_are_in_a_new_loop := false;
+        }
+
+        // Check if we reached the requested range
+        // so we can emit most recent values before date_from, if needed
+        if $reached_requested_range == false  {
+           // if date_from is null, we won't ever be in the requested range
+           // this is useful because date_from IS null means we just want the latest value
+           if $date_from IS DISTINCT FROM null {
+               // check if we reached the requested range
+               if $row_raw.date_value >= $date_from {
+                   $reached_requested_range := true;
+                   $is_exactly_date_from bool := $row_raw.date_value == $date_from;
+                   // we will emit values if we are NOT in the date_from;
+                   // it means that we skipped the date_from and we need the most recent past data
+                   for $emit_row in SELECT * FROM
+                                    emit_values_if($is_exactly_date_from == false, $prev_loop_date, $last_values, $taxonomy_weight_list) {
+                       return next $emit_row.date_value, $emit_row.value * $emit_row.weight, $emit_row.weight;
+                   }
+               }
+           }
+        }
+
+         // we will only emit values if we are in the requested range
+         // we won't use the else statement, because it might have been assigned in this same
+         // loop iteration
+         if $reached_requested_range == true {
+            // here we are already processing the requested range
+            // our objective is filling last loop and present loop gaps
+
+            // Handle the new loop case
+            if $we_are_in_a_new_loop == true {
+                // did we expect to be in the new loop?
+                if $expected_next_taxonomy_index != 1 {
+                    // We're in a new loop, but we have some missing values from the previous loop
+                    // Fill the gap of the previous date
+                    for $i in $expected_next_taxonomy_index..$taxonomy_count {
+                        if $last_values[$i] is not null {
+                            return next $prev_loop_date, $last_values[$i] * $taxonomy_weight_list[$i], $taxonomy_weight_list[$i];
+                        }
+                    }
+                }
+
+                // Maybe we didn't start the loop at the first taxonomy
+                for $i1 in 1..($current_taxonomy_index - 1) {
+                    if $last_values[$i1] is distinct from null {
+                        return next $row_raw.date_value, $last_values[$i1] * $taxonomy_weight_list[$i1], $taxonomy_weight_list[$i1];
+                    }
+                }
+            } else {
+                // we're not in a new loop, let's fill the gaps between the last and the current taxonomy
+                // if we are in the expected next index, the loop won't run
+                for $i2 in $expected_next_taxonomy_index..$current_taxonomy_index - 1 {
+                    // if last values is not null, we should return it
+                    if $last_values[$i2] is not null {
+                        return next $row_raw.date_value, $last_values[$i2] * $taxonomy_weight_list[$i2], $taxonomy_weight_list[$i2];
+                    } else {
+                        // it's null. We don't need to return nothing, because its weight shouldn't be counted in the sum
+                        // but let's maintain the else statement for clarity
+                    }
+                }
+            }
+
+        // Adjust next expected index, reset if needed
+            $expected_next_taxonomy_index := $current_taxonomy_index + 1;
+            if $expected_next_taxonomy_index > $taxonomy_count {
+                $expected_next_taxonomy_index := 1;
+            }
+
+            // Return the current row value
+            return next $row_raw.date_value, $row_raw.value * $taxonomy_weight_list[$current_taxonomy_index], $taxonomy_weight_list[$current_taxonomy_index];
+
+         }
+
+        // Update the last values array with the already processed value
+        $prev_loop_date := $row_raw.date_value;
+        $last_values := set_array_element($last_values, $row_raw.taxonomy_index, $row_raw.value);
+    }
+
+    // Final check to fill any remaining gaps
+    if $expected_next_taxonomy_index != 1 OR $reached_requested_range == false {
+        for $i3 in $expected_next_taxonomy_index..$taxonomy_count {
+            if $last_values[$i3] is not null {
+                return next $prev_loop_date, $last_values[$i3] * $taxonomy_weight_list[$i3], $taxonomy_weight_list[$i3];
+            } else {
+                // it's null. We don't need to return nothing, because its weight shouldn't be counted in the sum
+                // but let's maintain the else statement for clarity
+            }
+        }
+    }
+}
+
+// get_index_filled retrieves the filled index for a specified date range
+// and fills the gaps with the last known value for each taxonomy
+// if the last known value is not available, it will not emit the index, making it a sparse table
+procedure get_index_filled($date_from text, $date_to text, $frozen_at int) private view returns table(
+    date_value text,
+    value_with_weight decimal(21,3), // value * weight
+    // we also return the weight, so we can calculate the total weight for a date
+    weight decimal(21,3)
+) {
+    // Initialize taxonomy variables
+    $taxonomy_count int := 0;
+    $taxonomy_weight_list decimal(21,3)[];
+    $last_values decimal(21,3)[];
+
+    // Fetch taxonomy details
+    for $row in SELECT * FROM describe_taxonomies(true) {
+        $taxonomy_count := $taxonomy_count + 1;
+        $taxonomy_weight_list := array_append($taxonomy_weight_list, $row.weight);
+        $last_values := array_append($last_values, null::decimal(21,3));
+    }
+
+    // Initialize last values array with null values
+    // arrays are 1-indexed, so we match that
+    $current_taxonomy_index int := 0;
+    $expected_next_taxonomy_index int := 1;
+    $we_are_in_a_new_loop bool := false;
+    $reached_requested_range bool := false;
+    $prev_loop_date text := '';
+
+   // what could make this process easier:
+   // - assign values to specific indexes in the array (set_array_element)
+   // - use a map to store the last values, so we can easily check if a value is null
+   // - better manipulation of tables as objects, then we could modify a table to
+   //   fill forward without needing to return immediately on each loop
+
+    // Iterate through the index and process them
+    for $row_raw in SELECT date_value, value, taxonomy_index FROM get_raw_index($date_from, $date_to, $frozen_at) as r
+    ORDER BY r.date_value ASC, r.taxonomy_index ASC {
+
+        // Update the last values array with the current value
+        $current_taxonomy_index := $row_raw.taxonomy_index;
+
+        // Check if we are in a new loop
+        if $prev_loop_date != $row_raw.date_value {
+            $we_are_in_a_new_loop := true;
+        } else {
+            $we_are_in_a_new_loop := false;
+        }
+
+        // Check if we reached the requested range
+        // so we can emit most recent values before date_from, if needed
+        if $reached_requested_range == false  {
+           // if date_from is null, we won't ever be in the requested range
+           // this is useful because date_from IS null means we just want the latest value
+           if $date_from IS DISTINCT FROM null {
+               // check if we reached the requested range
+               if $row_raw.date_value >= $date_from {
+                   $reached_requested_range := true;
+                   $is_exactly_date_from bool := $row_raw.date_value == $date_from;
+                   // we will emit values if we are NOT in the date_from;
+                   // it means that we skipped the date_from and we need the most recent past data
+                   for $emit_row in
+                    SELECT * FROM emit_values_if($is_exactly_date_from == false, $prev_loop_date, $last_values, $taxonomy_weight_list) {
+                       return next $emit_row.date_value, $emit_row.value * $emit_row.weight, $emit_row.weight;
+                   }
+               }
+           }
+        }
+
+         // we will only emit values if we are in the requested range
+         // we won't use the else statement, because it might have been assigned in this same
+         // loop iteration
+         if $reached_requested_range == true {
+            // here we are already processing the requested range
+            // our objective is filling last loop and present loop gaps
+
+            // Handle the new loop case
+            if $we_are_in_a_new_loop == true {
+                // did we expect to be in the new loop?
+                if $expected_next_taxonomy_index != 1 {
+                    // We're in a new loop, but we have some missing values from the previous loop
+                    // Fill the gap of the previous date
+                    for $i in $expected_next_taxonomy_index..$taxonomy_count {
+                        if $last_values[$i] is not null {
+                            return next $prev_loop_date, $last_values[$i] * $taxonomy_weight_list[$i], $taxonomy_weight_list[$i];
+                        }
+                    }
+                }
+
+                // Maybe we didn't start the loop at the first taxonomy
+                for $i1 in 1..($current_taxonomy_index - 1) {
+                    if $last_values[$i1] is distinct from null {
+                        return next $row_raw.date_value, $last_values[$i1] * $taxonomy_weight_list[$i1], $taxonomy_weight_list[$i1];
+                    }
+                }
+            } else {
+                // we're not in a new loop, let's fill the gaps between the last and the current taxonomy
+                // if we are in the expected next index, the loop won't run
+                for $i2 in $expected_next_taxonomy_index..$current_taxonomy_index - 1 {
+                    // if last values is not null, we should return it
+                    if $last_values[$i2] is not null {
+                        return next $row_raw.date_value, $last_values[$i2] * $taxonomy_weight_list[$i2], $taxonomy_weight_list[$i2];
+                    } else {
+                        // it's null. We don't need to return nothing, because its weight shouldn't be counted in the sum
+                        // but let's maintain the else statement for clarity
+                    }
+                }
+            }
+
+            // Adjust next expected index, reset if needed
+            $expected_next_taxonomy_index := $current_taxonomy_index + 1;
+            if $expected_next_taxonomy_index > $taxonomy_count {
+                $expected_next_taxonomy_index := 1;
+            }
+
+            // Return the current row value
+            return next $row_raw.date_value, $row_raw.value * $taxonomy_weight_list[$current_taxonomy_index], $taxonomy_weight_list[$current_taxonomy_index];
+         }
+
+        // Update the last values array with the already processed value
+        $prev_loop_date := $row_raw.date_value;
+        $last_values := set_array_element($last_values, $row_raw.taxonomy_index, $row_raw.value);
+    }
+
+    // Final check to fill any remaining gaps
+    if $expected_next_taxonomy_index != 1 OR $reached_requested_range == false {
+        for $i3 in $expected_next_taxonomy_index..$taxonomy_count {
+            if $last_values[$i3] is not null {
+                return next $prev_loop_date, $last_values[$i3] * $taxonomy_weight_list[$i3], $taxonomy_weight_list[$i3];
+            } else {
+                // it's null. We don't need to return nothing, because its weight shouldn't be counted in the sum
+                // but let's maintain the else statement for clarity
+            }
+        }
+    }
+}
+
+// get_record retrieves the records for a specified date range as expected from the stream interface
+// i.e. with filled gaps
+procedure get_record($date_from text, $date_to text, $frozen_at int) public view returns table(
+    date_value text,
+    value decimal(21,3)
+) {
+    // check if the stream is allowed to compose
+    is_stream_allowed_to_compose();
+
+    // here, we sum all of the records that were found by aggregating on the date_valie
+    for $row in
+        SELECT
+            r.date_value AS date_value,
+            SUM(r.value_with_weight)::decimal(21,3) AS total_value_with_weight,
+            SUM(r.weight)::decimal(21,3) AS total_weight
+        FROM get_record_filled($date_from, $date_to, $frozen_at) as r group by r.date_value {
+        // total_weight is not necessarily the sum of all taxonomy weights, because
+        // there might be missing data points for initial dates
+        return next $row.date_value, $row.total_value_with_weight / $row.total_weight;
+    }
+}
+
+
+// get_index retrieves the index for a specified date range as expected from the stream interface
+// i.e. with filled gaps
+procedure get_index($date_from text, $date_to text, $frozen_at int) public view returns table(
+    date_value text,
+    value decimal(21,3)
+) {
+    // check if the stream is allowed to compose
+    is_stream_allowed_to_compose();
+
+    // here, we sum all of the index that were found by aggregating on the date_valie
+    for $row in
+        SELECT
+            r.date_value AS date_value,
+            SUM(r.value_with_weight)::decimal(21,3) AS total_value_with_weight,
+            SUM(r.weight)::decimal(21,3) AS total_weight
+        FROM get_index_filled($date_from, $date_to, $frozen_at) as r group by r.date_value {
+        // total_weight is not necessarily the sum of all taxonomy weights, because
+        // there might be missing data points for initial dates
+        return next $row.date_value, $row.total_value_with_weight / $row.total_weight;
+    }
+}
+
+procedure is_initiated() private view returns (result bool) {
+    // check if it was already initialized
+    // for that we check if type is already provided
+    for $row in SELECT * FROM metadata WHERE metadata_key = 'type' LIMIT 1 {
+        return true;
+    }
+
+    return false;
+}
+
+procedure is_stream_owner($wallet text) public view returns (result bool) {
+    for $row in SELECT * FROM metadata WHERE metadata_key = 'stream_owner' AND value_ref = LOWER($wallet) LIMIT 1 {
+        return true;
+    }
+    return false;
+}
+
+procedure is_wallet_allowed_to_read($wallet text) public view returns (value bool) {
+
+    // if public, anyone can always read
+    // If there's no visibility metadata, it's public.
+    $visibility int := 0;
+    for $v_row in SELECT * FROM get_metadata('read_visibility', true, null) {
+        $visibility := $v_row.value_i;
+    }
+
+    if $visibility == 0 {
+        return true;
+    }
+
+    // if it's the owner, it's permitted
+    if is_stream_owner($wallet) {
+        return true;
+    }
+
+    // if there's metadata allow_read_wallet -> <wallet>, then its permitted
+    for $row in SELECT * FROM get_metadata('allow_read_wallet', false, $wallet) {
+        return true;
+    }
+
+    return false;
+}
+
+procedure stream_owner_only() private view {
+    if is_stream_owner(@caller) == false  {
+        error('Stream owner only procedure');
+    }
+}
+
+// init method prepares the contract with default values and permanent ones
+procedure init() public owner {
+    if is_initiated() {
+        error('this contract was already initialized');
+    }
+
+    $current_block int := @height;
+
+    // uuid's namespaces are any random generated uuid from https://www.uuidtools.com/v5
+    // but each usage should be different to maintain determinism, so we reuse the previous result
+    $current_uuid uuid := uuid_generate_v5('41fea9f0-179f-11ef-8838-325096b39f47'::uuid, @txid);
+
+    // type = composed
+    $current_uuid :=  uuid_generate_v5($current_uuid, @txid);
+    INSERT INTO metadata (row_id, metadata_key, value_s, created_at)
+        VALUES ($current_uuid, 'type', 'composed', $current_block);
+
+    // stream_owner = @caller
+    $current_uuid :=  uuid_generate_v5($current_uuid, @txid);
+    INSERT INTO metadata (row_id, metadata_key, value_ref, created_at)
+        VALUES ($current_uuid, 'stream_owner', LOWER(@caller), 1);
+
+    // compose_visibility = 0 (public)
+    $current_uuid :=  uuid_generate_v5($current_uuid, @txid);
+    INSERT INTO metadata (row_id, metadata_key, value_i, created_at)
+        VALUES ($current_uuid, 'compose_visibility', 0, $current_block);
+
+    // read_visibility = 0 (public)
+    $current_uuid :=  uuid_generate_v5($current_uuid, @txid);
+    INSERT INTO metadata (row_id, metadata_key, value_i, created_at)
+        VALUES ($current_uuid, 'read_visibility', 0, $current_block);
+
+    $readonly_keys text[] := [
+        'type',
+        'stream_owner',
+        'readonly_key',
+        'taxonomy_version'
+    ];
+
+    for $key in $readonly_keys {
+        $current_uuid :=  uuid_generate_v5($current_uuid, @txid);
+        INSERT INTO metadata (row_id, metadata_key, value_s, created_at)
+            VALUES ($current_uuid, 'readonly_key', $key, $current_block);
+    }
+}
+
+// Note:    We're letting the user be the source of truth for which type a key should have.
+//          To change that, we could initiate `key_type:<key>` key on metadata table, that could be used here
+//          to enforce a type. However, this would force us to know every metadata key before deploying a contract
+procedure insert_metadata(
+    $key text,
+    $value text,
+    $val_type text
+    // TODO: would be better to use value_x from args. However this doesn't work well for nullable inputs
+    //  i.e. if we use a bool type we'll get an conversion error from Nil -> bool. And we don't want to force user to provide
+    //  a value if nil is intended.
+    ) public {
+
+    $value_i int;
+    $value_s text;
+    $value_f decimal(21,3);
+    $value_b bool;
+    $value_ref text;
+
+    if $val_type == 'int' {
+        $value_i := $value::int;
+    } elseif $val_type == 'string' {
+        $value_s := $value;
+    } elseif $val_type == 'bool' {
+        $value_b := $value::bool;
+    } elseif $val_type == 'ref' {
+        $value_ref := $value;
+    } elseif $val_type == 'float' {
+        $value_f := $value::decimal(21,3);
+    } else {
+        error(format('unknown type used "%s". valid types = "float" | "bool" | "int" | "ref" | "string"', $val_type));
+    }
+
+    stream_owner_only();
+
+    if is_initiated() == false {
+        error('contract must be initiated');
+    }
+
+    // check if it's read-only
+    for $row in SELECT * FROM metadata WHERE metadata_key = 'readonly_key' AND value_s = $key LIMIT 1 {
+        error('Cannot insert metadata for read-only key');
+    }
+
+    $uuid uuid := uuid_generate_v5('1361df5d-0230-47b3-b2c1-37950cf51fe9'::uuid, @txid);
+    $current_block int := @height;
+
+    // insert data
+    INSERT INTO metadata (row_id, metadata_key, value_i, value_f, value_s, value_b, value_ref, created_at)
+        VALUES ($uuid, $key, $value_i, $value_f, $value_s, $value_b, LOWER($value_ref), $current_block);
+}
+
+// key: the metadata key to look for
+// only_latest: if true, only return the latest version of the metadata
+// ref: if provided, only return metadata with that ref
+procedure get_metadata($key text, $only_latest bool, $ref text) public view returns table(
+        row_id uuid,
+        value_i int,
+        value_f decimal(21,3),
+        value_b bool,
+        value_s text,
+        value_ref text,
+        created_at int
+        ) {
+
+        if $only_latest == true {
+            if $ref is distinct from null {
+                for $row in SELECT
+                              row_id,
+                              value_ref,
+                              created_at
+                FROM metadata
+                WHERE metadata_key = $key AND disabled_at IS NULL AND value_ref = LOWER($ref)
+                ORDER BY created_at DESC
+                LIMIT 1 {
+                    return next $row.row_id, null, null, null, null, $row.value_ref, $row.created_at;
+                }
+            } else {
+                return SELECT
+                              row_id,
+                              value_i,
+                              value_f,
+                              value_b,
+                              value_s,
+                              value_ref,
+                              created_at
+                FROM metadata
+                WHERE metadata_key = $key AND disabled_at IS NULL
+                ORDER BY created_at DESC
+                LIMIT 1;
+            }
+        } else {
+           // SHOULD BE THE EXACT CODE AS ABOVE, BUT WITHOUT LIMIT
+           if $ref is distinct from null {
+               for $row2 in SELECT
+                             row_id,
+                             value_ref,
+                             created_at
+               FROM metadata
+               WHERE metadata_key = $key AND disabled_at IS NULL AND value_ref = LOWER($ref)
+               ORDER BY created_at DESC {
+                   return next $row2.row_id, null, null, null, null, $row2.value_ref, $row2.created_at;
+               }
+           } else {
+               return SELECT
+                             row_id,
+                             value_i,
+                             value_f,
+                             value_b,
+                             value_s,
+                             value_ref,
+                             created_at
+               FROM metadata
+               WHERE metadata_key = $key AND disabled_at IS NULL
+               ORDER BY created_at DESC;
+           }
+        }
+}
+
+procedure disable_metadata($row_id uuid) public {
+    stream_owner_only();
+
+    $current_block int := @height;
+
+    $found bool := false;
+
+    // Check if the metadata is not read-only
+    for $metadata_row in
+    SELECT metadata_key
+    FROM metadata
+    WHERE row_id = $row_id AND disabled_at IS NULL
+    LIMIT 1 {
+        $found := true;
+        $row_key text := $metadata_row.metadata_key;
+
+        for $readonly_row in SELECT row_id FROM metadata WHERE metadata_key = 'readonly_key' AND value_s = $row_key LIMIT 1 {
+            error('Cannot disable read-only metadata');
+        }
+
+        UPDATE metadata SET disabled_at = $current_block
+        WHERE row_id = $row_id;
+    }
+
+    if $found == false {
+        error('metadata record not found');
+    }
+}
+
+procedure transfer_stream_ownership($new_owner text) public {
+    stream_owner_only();
+
+    // fail if not a valid address
+    check_eth_address($new_owner);
+
+    UPDATE metadata SET value_ref = LOWER($new_owner)
+    WHERE metadata_key = 'stream_owner';
+}
+
+procedure check_eth_address($address text) private {
+    // TODO better check when kwil supports regexp and {}[] inside strings
+    // regex: ^0x[0-9a-fA-F]{40}$
+    // for $row in SELECT regexp_match($address, '^0x[0-9a-fA-F]{40}$') {
+    //     return true;
+    // }
+
+    if (length($address) != 42) {
+        error('invalid address length');
+    }
+
+    // check if starts with 0x
+    for $row in SELECT $address LIKE '0x%' as a {
+        if $row.a == false {
+            error('address does not start with 0x');
+        }
+    }
+}
+
+procedure get_current_version($show_disabled bool) private view returns (result int) {
+    if $show_disabled == false {
+         for $row in SELECT version FROM taxonomies WHERE disabled_at IS NULL ORDER BY version DESC LIMIT 1 {
+             return $row.version;
+         }
+    } else {
+        for $row2 in SELECT version FROM taxonomies ORDER BY version DESC LIMIT 1 {
+            return $row2.version;
+        }
+    }
+
+    return 0;
+}
+
+
+// NOTE we won't use this signature jsonb is not supported
+// procedure set_taxonomy($payload text) public {
+//     stream_owner_only();
+//     $next_version int := get_current_version() + 1;
+//     $block_height int := 2;
+//     $current_uuid uuid := uuid_generate_v5('e92064da-19c5-11ef-9bc0-325096b39f47'::uuid, @txid);
+//    for $row in SELECT
+//            elem->>'stream_id' as stream_id,
+//            elem->>'data_provider' as data_provider,
+//            elem->>'weight' as weight
+//        FROM jsonb_array_elements($payload::jsonb) as elem {
+//         $current_uuid :=  uuid_generate_v5($current_uuid, @txid);
+//         INSERT INTO taxonomy ( child_stream_id, child_stream_id, weight, created_at, version)
+//             VALUES ($row.stream_id, $row.data_provider, $row.weight::int, $block_height, $next_version);
+//     }
+// }
+
+// set_taxonomy is a batch insert that
+// - gets an array of values for each properties, zipping them as needed
+// - increases the version
+// - adds taxonomy records in batch
+procedure set_taxonomy($data_providers text[], $stream_ids text[], $weights decimal(21,3)[]) public {
+    stream_owner_only();
+
+    $next_version int := get_current_version(true) + 1;
+    $block_height int := @height;
+    $current_uuid uuid := uuid_generate_v5('e92064da-19c5-11ef-9bc0-325096b39f47'::uuid, @txid);
+
+    $length int := array_length($data_providers);
+
+    // check lengths
+    if $length != array_length($stream_ids) {
+        error('data_providers and stream_ids must have the same length');
+    }
+    if $length != array_length($weights) {
+        error('data_providers and weights must have the same length');
+    }
+
+    for $i in 1..$length {
+        INSERT INTO taxonomies (child_stream_id, child_data_provider, weight, created_at, version)
+            VALUES ($stream_ids[$i], $data_providers[$i], $weights[$i], $block_height, $next_version);
+    }
+}
+
+procedure describe_taxonomies($latest_version bool) public view returns table(
+        child_stream_id text,
+        child_data_provider text,
+        weight decimal(21,3),
+        created_at int,
+        version int
+        ) {
+
+        if $latest_version == true {
+            // just the latest enabled version should be returned
+            $current_version int := get_current_version(false);
+            for $row in SELECT
+                child_stream_id,
+                child_data_provider,
+                weight,
+                created_at,
+                version
+            FROM taxonomies
+            WHERE version = $current_version AND disabled_at IS NULL
+            ORDER BY created_at DESC {
+                return next $row.child_stream_id, $row.child_data_provider, $row.weight, $row.created_at, $row.version;
+            }
+        } else {
+            for $row2 in SELECT
+                child_stream_id,
+                child_data_provider,
+                weight,
+                created_at,
+                version
+            FROM taxonomies
+            WHERE disabled_at IS NULL
+            ORDER BY version DESC {
+                return next $row2.child_stream_id, $row2.child_data_provider, $row2.weight, $row2.created_at, $row2.version;
+            }
+        }
+}
+
+procedure disable_taxonomy($version int) public {
+    stream_owner_only();
+
+    $current_block int := @height;
+
+    $found bool := false;
+
+    // Check if the taxonomies with the given version exist and disable them
+    for $row in SELECT child_stream_id FROM taxonomies WHERE version = $version AND disabled_at IS NULL {
+        $found := true;
+        UPDATE taxonomies SET disabled_at = $current_block
+        WHERE version = $version AND disabled_at IS NULL;
+    }
+
+    if $found == false {
+        error('No taxonomies found for the given version');
+    }
+}
+
+procedure is_stream_allowed_to_compose() public view returns (value bool) {
+    // if public, anyone can always read
+    // If there's no visibility metadata, it's public.
+    $visibility int := 0;
+    for $v_row in SELECT * FROM get_metadata('compose_visibility', true, null) {
+        $visibility := $v_row.value_i;
+    }
+
+    if $visibility == 0 {
+        return true;
+    }
+
+    // if there's metadata allow_compose_stream -> <foreign_caller>, then its permitted
+    for $row in SELECT * FROM get_metadata('allow_compose_stream', true, @foreign_caller) LIMIT 1 {
+        return true;
+    }
+
+    error('Stream not allowed to compose');
+}
+
+
+procedure get_index_change($date_from text, $date_to text, $frozen_at int) public view returns table(
+    value decimal(21,3)) {
+    $index1 decimal(21,3):=0::decimal(21,3);
+    if $frozen_at == null{
+        $frozen_at := 0;
+    }
+    for $row1 in SELECT * FROM get_index($date_from, $date_from, $frozen_at){
+        $index1 := $row1.value;
+    }
+    $index2 decimal(21,3):=0::decimal(21,3);
+    for $row2 in SELECT * FROM get_index($date_to, $date_to, $frozen_at){
+        $index2 := $row2.value;
+    }
+    $percentage_value decimal(21,3) := ($index2 - $index1) * 100.00::decimal(21,3) / $index1;
+    return next $percentage_value;
+}
+// # Miscellaneous helpers
+
+// emit_values_if is a helper function to emit values if a condition is met
+procedure emit_values_if($condition bool, $date_value text, $values decimal(21,3)[], $weights decimal(21,3)[]) private view returns table(
+    date_value text,
+    value decimal(21,3),
+    weight decimal(21,3)
+) {
+    if $condition == true {
+        for $i in 1..array_length($values) {
+            return next $date_value, $values[$i], $weights[$i];
+        }
+    }
+}
+
+// helper function to set an array element at a given index
+procedure set_array_element($array decimal(21,3)[], $index int, $value decimal(21,3)) private view returns (result decimal(21,3)[]) {
+    // we can't use this because of the lack of support for array assignment
+    // such as $array[$index] := $value;
+    $new_array decimal(21,3)[];
+    // arrays are 1-indexed, so we match that
+    $last_index int := array_length($array);
+    for $i in 1..$last_index {
+        if $i == $index {
+            $new_array := array_append($new_array, $value);
+        } else {
+            $new_array := array_append($new_array, $array[$i]);
+        }
+    }
+
+    return $new_array;
+}
