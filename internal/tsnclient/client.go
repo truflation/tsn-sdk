@@ -99,7 +99,7 @@ func (c *Client) DestroyStream(ctx context.Context, streamId util.StreamId) (tra
 	return out.TxHash, nil
 }
 
-func (c *Client) LoadStream(ctx context.Context, streamId util.StreamId) (*tsn_api.Stream, error) {
+func (c *Client) LoadStream(streamId util.StreamId) (*tsn_api.Stream, error) {
 	return tsn_api.NewStream(tsn_api.NewStreamOptions{
 		Client:   c.kwilClient,
 		StreamId: streamId,
@@ -107,16 +107,16 @@ func (c *Client) LoadStream(ctx context.Context, streamId util.StreamId) (*tsn_a
 	})
 }
 
-func (c *Client) LoadPrimitiveStream(ctx context.Context, streamId util.StreamId) (*tsn_api.PrimitiveStream, error) {
-	return tsn_api.NewPrimitiveStream(ctx, tsn_api.NewStreamOptions{
+func (c *Client) LoadPrimitiveStream(streamId util.StreamId) (*tsn_api.PrimitiveStream, error) {
+	return tsn_api.NewPrimitiveStream(tsn_api.NewStreamOptions{
 		Client:   c.kwilClient,
 		StreamId: streamId,
 		Deployer: c.kwilClient.Signer.Identity(),
 	})
 }
 
-func (c *Client) LoadComposedStream(ctx context.Context, streamId util.StreamId) (*tsn_api.ComposedStream, error) {
-	return tsn_api.NewComposedStream(ctx, tsn_api.NewStreamOptions{
+func (c *Client) LoadComposedStream(streamId util.StreamId) (*tsn_api.ComposedStream, error) {
+	return tsn_api.NewComposedStream(tsn_api.NewStreamOptions{
 		Client:   c.kwilClient,
 		StreamId: streamId,
 		Deployer: c.kwilClient.Signer.Identity(),

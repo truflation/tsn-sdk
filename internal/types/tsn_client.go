@@ -14,7 +14,7 @@ type Client interface {
 	KwilClient() *kwilClientPkg.Client
 	DeployStream(ctx context.Context, streamId util.StreamId, streamType tsnapi.StreamType) (transactions.TxHash, error)
 	DestroyStream(ctx context.Context, streamId util.StreamId) (transactions.TxHash, error)
-	LoadStream(ctx context.Context, streamId util.StreamId) (*tsnapi.Stream, error)
-	LoadPrimitiveStream(ctx context.Context, streamId util.StreamId) (*tsnapi.PrimitiveStream, error)
-	LoadComposedStream(ctx context.Context, streamId util.StreamId) (*tsnapi.ComposedStream, error)
+	LoadStream(streamId util.StreamId) (*tsnapi.Stream, error)
+	LoadPrimitiveStream(streamId util.StreamId) (*tsnapi.PrimitiveStream, error)
+	LoadComposedStream(streamId util.StreamId) (*tsnapi.ComposedStream, error)
 }
