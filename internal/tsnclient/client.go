@@ -73,7 +73,7 @@ func (c *Client) KwilClient() *kwilClientPkg.Client {
 	return c.kwilClient
 }
 
-func (c *Client) DeployStream(ctx context.Context, streamId util.StreamId, streamType tsn_api.StreamType) (transactions.TxHash, error) {
+func (c *Client) DeployStream(ctx context.Context, streamId util.StreamId, streamType clientType.StreamType) (transactions.TxHash, error) {
 	out, err := tsn_api.DeployStream(ctx, tsn_api.DeployStreamInput{
 		StreamId:   streamId,
 		StreamType: streamType,
@@ -99,7 +99,7 @@ func (c *Client) DestroyStream(ctx context.Context, streamId util.StreamId) (tra
 	return out.TxHash, nil
 }
 
-func (c *Client) LoadStream(streamId util.StreamId) (*tsn_api.Stream, error) {
+func (c *Client) LoadStream(streamId util.StreamId) (clientType.IStream, error) {
 	return tsn_api.NewStream(tsn_api.NewStreamOptions{
 		Client:   c.kwilClient,
 		StreamId: streamId,
@@ -107,7 +107,7 @@ func (c *Client) LoadStream(streamId util.StreamId) (*tsn_api.Stream, error) {
 	})
 }
 
-func (c *Client) LoadPrimitiveStream(streamId util.StreamId) (*tsn_api.PrimitiveStream, error) {
+func (c *Client) LoadPrimitiveStream(streamId util.StreamId) (clientType.IPrimitiveStream, error) {
 	return tsn_api.NewPrimitiveStream(tsn_api.NewStreamOptions{
 		Client:   c.kwilClient,
 		StreamId: streamId,
@@ -115,7 +115,7 @@ func (c *Client) LoadPrimitiveStream(streamId util.StreamId) (*tsn_api.Primitive
 	})
 }
 
-func (c *Client) LoadComposedStream(streamId util.StreamId) (*tsn_api.ComposedStream, error) {
+func (c *Client) LoadComposedStream(streamId util.StreamId) (clientType.IComposedStream, error) {
 	return tsn_api.NewComposedStream(tsn_api.NewStreamOptions{
 		Client:   c.kwilClient,
 		StreamId: streamId,

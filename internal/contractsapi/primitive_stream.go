@@ -3,25 +3,16 @@ package contractsapi
 import (
 	"context"
 	"fmt"
-	"github.com/cockroachdb/apd/v3"
-	"github.com/golang-sql/civil"
-	"github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
+	"github.com/truflation/tsn-sdk/internal/types"
 	"strconv"
-	"time"
 )
-
-/*
- * # PrimitiveStream
- * Represents the API interface to interact with a deployed Primitive stream.
- *
- * example:
- * - Insert data
- */
 
 type PrimitiveStream struct {
 	Stream
 }
+
+var _ types.IPrimitiveStream = (*PrimitiveStream)(nil)
 
 const (
 	ErrorStreamNotPrimitive = "stream is not a primitive stream"
@@ -58,23 +49,14 @@ func (p *PrimitiveStream) checkValidPrimitiveStream(ctx context.Context) error {
 		return err
 	}
 
-	if streamType != StreamTypePrimitive {
+	if streamType != types.StreamTypePrimitive {
 		return fmt.Errorf(ErrorStreamNotPrimitive)
 	}
 
 	return nil
 }
 
-func (p *PrimitiveStream) call(ctx context.Context, method string, args []any) (*client.CallResult, error) {
-	err := p.checkValidPrimitiveStream(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return p._client.Call(ctx, p.DBID, method, args)
-}
-
-func (p *PrimitiveStream) execute(ctx context.Context, method string, args [][]any) (transactions.TxHash, error) {
+func (p *PrimitiveStream) checkedExecute(ctx context.Context, method string, args [][]any) (transactions.TxHash, error) {
 	err := p.checkValidPrimitiveStream(ctx)
 	if err != nil {
 		return transactions.TxHash{}, err
@@ -83,12 +65,7 @@ func (p *PrimitiveStream) execute(ctx context.Context, method string, args [][]a
 	return p._client.Execute(ctx, p.DBID, method, args)
 }
 
-type InsertRecordInput struct {
-	DateValue civil.Date
-	Value     int
-}
-
-func (p *PrimitiveStream) InsertRecords(ctx context.Context, inputs []InsertRecordInput) (transactions.TxHash, error) {
+func (p *PrimitiveStream) InsertRecords(ctx context.Context, inputs []types.InsertRecordInput) (transactions.TxHash, error) {
 	err := p.checkValidPrimitiveStream(ctx)
 	if err != nil {
 		return transactions.TxHash{}, err
@@ -105,69 +82,5 @@ func (p *PrimitiveStream) InsertRecords(ctx context.Context, inputs []InsertReco
 		})
 	}
 
-	return p.execute(ctx, "insert_record", args)
-}
-
-type GetRecordOutput struct {
-	DateValue civil.Date
-	Value     apd.Decimal
-}
-
-type GetRecordRawOutput struct {
-	DateValue string `json:"date_value"`
-	Value     string `json:"value"`
-}
-
-type GetRecordsInput struct {
-	DateFrom *civil.Date
-	DateTo   *civil.Date
-	FrozenAt *time.Time
-}
-
-// transformOrNil returns nil if the value is nil, otherwise it applies the transform function to the value.
-func transformOrNil[T any](value *T, transform func(T) any) any {
-	if value == nil {
-		return nil
-	}
-	return transform(*value)
-}
-
-func (p *PrimitiveStream) GetRecords(ctx context.Context, input GetRecordsInput) ([]GetRecordOutput, error) {
-	err := p.checkValidPrimitiveStream(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var args []any
-	args = append(args, transformOrNil(input.DateFrom, func(date civil.Date) any { return date.String() }))
-	args = append(args, transformOrNil(input.DateTo, func(date civil.Date) any { return date.String() }))
-	args = append(args, transformOrNil(input.FrozenAt, func(date time.Time) any { return date.UTC().Format(time.RFC3339) }))
-
-	results, err := p.call(ctx, "get_record", args)
-	if err != nil {
-		return nil, err
-	}
-
-	rawOutputs, err := DecodeCallResult[GetRecordRawOutput](results)
-	if err != nil {
-		return nil, err
-	}
-
-	var outputs []GetRecordOutput
-	for _, rawOutput := range rawOutputs {
-		value, _, err := apd.NewFromString(rawOutput.Value)
-		if err != nil {
-			return nil, err
-		}
-		dateValue, err := civil.ParseDate(rawOutput.DateValue)
-		if err != nil {
-			return nil, err
-		}
-		outputs = append(outputs, GetRecordOutput{
-			DateValue: dateValue,
-			Value:     *value,
-		})
-	}
-
-	return outputs, nil
+	return p.checkedExecute(ctx, "insert_record", args)
 }

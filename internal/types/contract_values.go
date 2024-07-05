@@ -1,4 +1,4 @@
-package contractsapi
+package types
 
 import "fmt"
 

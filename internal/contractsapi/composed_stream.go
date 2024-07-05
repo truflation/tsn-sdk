@@ -3,14 +3,17 @@ package contractsapi
 import (
 	"context"
 	"fmt"
-	"github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
+	"github.com/truflation/tsn-sdk/internal/types"
 	"github.com/truflation/tsn-sdk/internal/util"
+	"strconv"
 )
 
 type ComposedStream struct {
 	Stream
 }
+
+var _ types.IComposedStream = (*ComposedStream)(nil)
 
 const (
 	ErrorStreamNotComposed = "stream is not a composed stream"
@@ -48,33 +51,20 @@ func (c *ComposedStream) checkValidComposedStream(ctx context.Context) error {
 		return err
 	}
 
-	if streamType != StreamTypeComposed {
+	if streamType != types.StreamTypeComposed {
 		return fmt.Errorf(ErrorStreamNotComposed)
 	}
 
 	return nil
 }
 
-func (c *ComposedStream) call(ctx context.Context, method string, args []any) (*client.CallResult, error) {
-	err := c.checkValidComposedStream(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return c._client.Call(ctx, c.DBID, method, args)
-}
-
-func (c *ComposedStream) execute(ctx context.Context, method string, args [][]any) (transactions.TxHash, error) {
+func (c *ComposedStream) checkedExecute(ctx context.Context, method string, args [][]any) (transactions.TxHash, error) {
 	err := c.checkValidComposedStream(ctx)
 	if err != nil {
 		return transactions.TxHash{}, err
 	}
 
-	return c._client.Execute(ctx, c.DBID, method, args)
-}
-
-type DescribeTaxonomiesParams struct {
-	LatestVersion bool
+	return c.execute(ctx, method, args)
 }
 
 type DescribeTaxonomiesResult struct {
@@ -87,12 +77,56 @@ type DescribeTaxonomiesResult struct {
 	Version   int    `json:"version"`
 }
 
-func (c *ComposedStream) DescribeTaxonomies(ctx context.Context, params DescribeTaxonomiesParams) ([]DescribeTaxonomiesResult, error) {
+func (c *ComposedStream) DescribeTaxonomies(ctx context.Context, params types.DescribeTaxonomiesParams) ([]types.TaxonomyItem, error) {
 	records, err := c.call(ctx, "describe_taxonomies", []any{params.LatestVersion})
 
 	if err != nil {
 		return nil, err
 	}
 
-	return DecodeCallResult[DescribeTaxonomiesResult](records)
+	result, err := DecodeCallResult[DescribeTaxonomiesResult](records)
+	if err != nil {
+		return nil, err
+	}
+
+	var taxonomies []types.TaxonomyItem
+	for _, r := range result {
+		dpAddress, err := util.NewEthereumAddressFromString(r.ChildDataProvider)
+		if err != nil {
+			return nil, err
+		}
+		weight, err := strconv.ParseFloat(r.Weight, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		taxonomies = append(taxonomies, types.TaxonomyItem{
+			ChildStream: types.StreamLocator{
+				StreamId:     r.ChildStreamId,
+				DataProvider: dpAddress,
+			},
+			Weight: weight,
+		})
+	}
+
+	return taxonomies, nil
+}
+
+func (c *ComposedStream) SetTaxonomy(ctx context.Context, taxonomies []types.TaxonomyItem) (transactions.TxHash, error) {
+	var (
+		dataProviders []string
+		streamIDs     util.StreamIdSlice
+		weights       []string
+	)
+
+	for _, taxonomy := range taxonomies {
+		dataProviders = append(dataProviders, fmt.Sprintf("%s", taxonomy.ChildStream.DataProvider.Address()))
+		streamIDs = append(streamIDs, taxonomy.ChildStream.StreamId)
+		weights = append(weights, fmt.Sprintf("%f", taxonomy.Weight))
+	}
+
+	var args [][]any
+
+	args = append(args, []any{dataProviders, streamIDs.Strings(), weights})
+	return c.checkedExecute(ctx, "set_taxonomy", args)
 }
