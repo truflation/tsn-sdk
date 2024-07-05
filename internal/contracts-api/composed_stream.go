@@ -7,22 +7,22 @@ import (
 )
 
 /*
- * # DeployedComposedStream
+ * # ComposedStream
  * Represents the API interface to interact with a deployed composed stream.
  * Example:
  * - Describe Taxonomies
  * - Insert Taxonomy
  */
 
-type DeployedComposedStream struct {
-	DeployedStream
+type ComposedStream struct {
+	Stream
 }
 
 const (
 	ErrorStreamNotComposed = "stream is not a composed stream"
 )
 
-func DeployedComposedStreamFromDeployedStream(ctx context.Context, stream DeployedStream) (*DeployedComposedStream, error) {
+func DeployedComposedStreamFromDeployedStream(ctx context.Context, stream Stream) (*ComposedStream, error) {
 	streamType, err := stream.GetType(ctx)
 
 	if err != nil {
@@ -32,13 +32,13 @@ func DeployedComposedStreamFromDeployedStream(ctx context.Context, stream Deploy
 	if streamType != StreamTypeComposed {
 		return nil, fmt.Errorf(ErrorStreamNotComposed)
 	}
-	return &DeployedComposedStream{
-		DeployedStream: stream,
+	return &ComposedStream{
+		Stream: stream,
 	}, nil
 }
 
-func NewDeployedComposedStream(ctx context.Context, opts NewDeployedStreamOptions) (*DeployedComposedStream, error) {
-	stream, err := NewDeployedStream(opts)
+func NewDeployedComposedStream(ctx context.Context, opts NewStreamOptions) (*ComposedStream, error) {
+	stream, err := NewStream(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ type DescribeTaxonomiesResult struct {
 	Version   int    `json:"version"`
 }
 
-func (s DeployedComposedStream) DescribeTaxonomies(ctx context.Context, params DescribeTaxonomiesParams) ([]DescribeTaxonomiesResult, error) {
+func (s ComposedStream) DescribeTaxonomies(ctx context.Context, params DescribeTaxonomiesParams) ([]DescribeTaxonomiesResult, error) {
 	records, err := s._client.Call(ctx, s.DBID, "describe_taxonomies", []any{params.LatestVersion})
 
 	if err != nil {

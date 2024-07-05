@@ -19,7 +19,7 @@ type DeployStreamInput struct {
 }
 
 type DeployStreamOutput struct {
-	DeployedStream DeployedStream
+	DeployedStream Stream
 	TxHash         transactions.TxHash
 }
 
@@ -38,13 +38,13 @@ func DeployStream(ctx context.Context, input DeployStreamInput) (*DeployStreamOu
 		return nil, err
 	}
 
-	options := NewDeployedStreamOptions{
+	options := NewStreamOptions{
 		Client:   input.KwilClient,
 		StreamId: input.StreamId,
 		Deployer: input.Deployer,
 	}
 
-	deployedStream, err := NewDeployedStream(options)
+	deployedStream, err := NewStream(options)
 	if err != nil {
 		return nil, err
 	}

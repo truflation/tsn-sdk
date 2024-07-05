@@ -58,7 +58,7 @@ func addArgOrNull(oldArgs []any, newArg any, nullIfZero bool) []any {
 	return append(oldArgs, newArg)
 }
 
-func (s DeployedStream) getMetadata(ctx context.Context, params GetMetadataParams) ([]GetMetadataResult, error) {
+func (s Stream) getMetadata(ctx context.Context, params GetMetadataParams) ([]GetMetadataResult, error) {
 
 	var args []any
 
@@ -82,7 +82,7 @@ type metadataInput struct {
 	Value MetadataValue
 }
 
-func (s DeployedStream) BatchInsertMetadata(ctx context.Context, inputs []metadataInput) (transactions.TxHash, error) {
+func (s Stream) BatchInsertMetadata(ctx context.Context, inputs []metadataInput) (transactions.TxHash, error) {
 	var tuples [][]any
 	for _, input := range inputs {
 		valType := input.Key.GetType()
@@ -98,14 +98,14 @@ func (s DeployedStream) BatchInsertMetadata(ctx context.Context, inputs []metada
 	return s._client.Execute(ctx, s.DBID, "insert_metadata", tuples)
 }
 
-func (s DeployedStream) insertMetadata(ctx context.Context, key MetadataKey, value MetadataValue) (transactions.TxHash, error) {
+func (s Stream) insertMetadata(ctx context.Context, key MetadataKey, value MetadataValue) (transactions.TxHash, error) {
 	return s.BatchInsertMetadata(ctx, []metadataInput{{key, value}})
 }
 
-func (s DeployedStream) disableMetadata(ctx context.Context, rowId string) (transactions.TxHash, error) {
+func (s Stream) disableMetadata(ctx context.Context, rowId string) (transactions.TxHash, error) {
 	return s._client.Execute(ctx, s.DBID, "disable_metadata", [][]any{{rowId}})
 }
 
-func (s DeployedStream) InitializeStream(ctx context.Context) (transactions.TxHash, error) {
+func (s Stream) InitializeStream(ctx context.Context) (transactions.TxHash, error) {
 	return s._client.Execute(ctx, s.DBID, "init", nil)
 }

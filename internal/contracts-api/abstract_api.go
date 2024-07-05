@@ -7,23 +7,23 @@ import (
 	"github.com/truflation/tsn-sdk/internal/utils"
 )
 
-func (s DeployedStream) AllowReadWallet(ctx context.Context, wallet utils.EthereumAddress) (transactions.TxHash, error) {
+func (s Stream) AllowReadWallet(ctx context.Context, wallet utils.EthereumAddress) (transactions.TxHash, error) {
 	return s.insertMetadata(ctx, AllowReadWalletKey, NewMetadataValue(wallet.Address()))
 }
 
-func (s DeployedStream) DisableReadWallet(ctx context.Context, wallet utils.EthereumAddress) (transactions.TxHash, error) {
+func (s Stream) DisableReadWallet(ctx context.Context, wallet utils.EthereumAddress) (transactions.TxHash, error) {
 	return s.disableMetadataByRef(ctx, AllowReadWalletKey, wallet.Address())
 }
 
-func (s DeployedStream) AllowComposeStream(ctx context.Context, streamId utils.StreamId) (transactions.TxHash, error) {
+func (s Stream) AllowComposeStream(ctx context.Context, streamId utils.StreamId) (transactions.TxHash, error) {
 	return s.insertMetadata(ctx, AllowComposeStreamKey, NewMetadataValue(streamId.String()))
 }
 
-func (s DeployedStream) DisableComposeStream(ctx context.Context, streamId utils.StreamId) (transactions.TxHash, error) {
+func (s Stream) DisableComposeStream(ctx context.Context, streamId utils.StreamId) (transactions.TxHash, error) {
 	return s.disableMetadataByRef(ctx, AllowComposeStreamKey, streamId.String())
 }
 
-func (s DeployedStream) GetComposeVisibility(ctx context.Context) (*utils.VisibilityEnum, error) {
+func (s Stream) GetComposeVisibility(ctx context.Context) (*utils.VisibilityEnum, error) {
 	results, err := s.getMetadata(ctx, GetMetadataParams{
 		Key:        ComposeVisibilityKey,
 		OnlyLatest: true,
@@ -54,11 +54,11 @@ func (s DeployedStream) GetComposeVisibility(ctx context.Context) (*utils.Visibi
 	return &visibility, nil
 }
 
-func (s DeployedStream) SetComposeVisibility(ctx context.Context, visibility utils.VisibilityEnum) (transactions.TxHash, error) {
+func (s Stream) SetComposeVisibility(ctx context.Context, visibility utils.VisibilityEnum) (transactions.TxHash, error) {
 	return s.insertMetadata(ctx, ComposeVisibilityKey, NewMetadataValue(int(visibility)))
 }
 
-func (s DeployedStream) GetReadVisibility(ctx context.Context) (*utils.VisibilityEnum, error) {
+func (s Stream) GetReadVisibility(ctx context.Context) (*utils.VisibilityEnum, error) {
 	values, err := s.getMetadata(ctx, GetMetadataParams{
 		Key:        ReadVisibilityKey,
 		OnlyLatest: true,
@@ -84,7 +84,7 @@ func (s DeployedStream) GetReadVisibility(ctx context.Context) (*utils.Visibilit
 	return &visibility, nil
 }
 
-func (s DeployedStream) GetAllowedReadWallets(ctx context.Context) ([]utils.EthereumAddress, error) {
+func (s Stream) GetAllowedReadWallets(ctx context.Context) ([]utils.EthereumAddress, error) {
 	results, err := s.getMetadata(ctx, GetMetadataParams{
 		Key: AllowReadWalletKey,
 	})
@@ -112,7 +112,7 @@ func (s DeployedStream) GetAllowedReadWallets(ctx context.Context) ([]utils.Ethe
 	return wallets, nil
 }
 
-func (s DeployedStream) GetAllowedComposeStreams(ctx context.Context) ([]utils.StreamId, error) {
+func (s Stream) GetAllowedComposeStreams(ctx context.Context) ([]utils.StreamId, error) {
 	results, err := s.getMetadata(ctx, GetMetadataParams{
 		Key: AllowComposeStreamKey,
 	})
@@ -141,13 +141,13 @@ func (s DeployedStream) GetAllowedComposeStreams(ctx context.Context) ([]utils.S
 	return streams, nil
 }
 
-func (s DeployedStream) SetReadVisibility(ctx context.Context, visibility utils.VisibilityEnum) (transactions.TxHash, error) {
+func (s Stream) SetReadVisibility(ctx context.Context, visibility utils.VisibilityEnum) (transactions.TxHash, error) {
 	return s.insertMetadata(ctx, ReadVisibilityKey, NewMetadataValue(int(visibility)))
 }
 
 var MetadataValueNotFound = errors.New("metadata value not found")
 
-func (s DeployedStream) disableMetadataByRef(ctx context.Context, key MetadataKey, ref string) (transactions.TxHash, error) {
+func (s Stream) disableMetadataByRef(ctx context.Context, key MetadataKey, ref string) (transactions.TxHash, error) {
 	metadataList, err := s.getMetadata(ctx, GetMetadataParams{
 		Key:        key,
 		OnlyLatest: true,

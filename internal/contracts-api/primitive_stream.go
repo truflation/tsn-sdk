@@ -11,22 +11,22 @@ import (
 )
 
 /*
- * # DeployedPrimitiveStream
+ * # PrimitiveStream
  * Represents the API interface to interact with a deployed Primitive stream.
  *
  * example:
  * - Insert data
  */
 
-type DeployedPrimitiveStream struct {
-	DeployedStream
+type PrimitiveStream struct {
+	Stream
 }
 
 const (
 	ErrorStreamNotPrimitive = "stream is not a primitive stream"
 )
 
-func DeployedPrimitiveStreamFromDeployedStream(ctx context.Context, stream DeployedStream) (*DeployedPrimitiveStream, error) {
+func DeployedPrimitiveStreamFromDeployedStream(ctx context.Context, stream Stream) (*PrimitiveStream, error) {
 	streamType, err := stream.GetType(ctx)
 
 	if err != nil {
@@ -36,13 +36,13 @@ func DeployedPrimitiveStreamFromDeployedStream(ctx context.Context, stream Deplo
 	if streamType != StreamTypePrimitive {
 		return nil, fmt.Errorf(ErrorStreamNotPrimitive)
 	}
-	return &DeployedPrimitiveStream{
-		DeployedStream: stream,
+	return &PrimitiveStream{
+		Stream: stream,
 	}, nil
 }
 
-func NewDeployedPrimitiveStream(ctx context.Context, options NewDeployedStreamOptions) (*DeployedPrimitiveStream, error) {
-	stream, err := NewDeployedStream(options)
+func NewDeployedPrimitiveStream(ctx context.Context, options NewStreamOptions) (*PrimitiveStream, error) {
+	stream, err := NewStream(options)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ type InsertRecordInput struct {
 	Value     int
 }
 
-func (s *DeployedPrimitiveStream) InsertRecords(ctx context.Context, inputs []InsertRecordInput) (transactions.TxHash, error) {
+func (s *PrimitiveStream) InsertRecords(ctx context.Context, inputs []InsertRecordInput) (transactions.TxHash, error) {
 	var args [][]any
 	for _, input := range inputs {
 
@@ -93,7 +93,7 @@ func transformOrNil[T any](value *T, transform func(T) any) any {
 	return transform(*value)
 }
 
-func (s *DeployedPrimitiveStream) GetRecords(ctx context.Context, input GetRecordsInput) ([]GetRecordOutput, error) {
+func (s *PrimitiveStream) GetRecords(ctx context.Context, input GetRecordsInput) ([]GetRecordOutput, error) {
 	var args []any
 	args = append(args, transformOrNil(input.DateFrom, func(date civil.Date) any { return date.String() }))
 	args = append(args, transformOrNil(input.DateTo, func(date civil.Date) any { return date.String() }))

@@ -13,7 +13,7 @@ import (
 
 // ## Initializations
 
-type DeployedStream struct {
+type Stream struct {
 	StreamId  utils.StreamId
 	_type     StreamType
 	_deployer []byte
@@ -22,7 +22,7 @@ type DeployedStream struct {
 	_client   client.Client
 }
 
-type NewDeployedStreamOptions struct {
+type NewStreamOptions struct {
 	Client   client.Client
 	StreamId utils.StreamId
 	Deployer []byte
@@ -32,7 +32,7 @@ const (
 	ErrorStreamNotFound = "stream not found"
 )
 
-func NewDeployedStream(options NewDeployedStreamOptions) (*DeployedStream, error) {
+func NewStream(options NewStreamOptions) (*Stream, error) {
 	optClient := options.Client
 	streamId := options.StreamId
 	deployer := options.Deployer
@@ -53,7 +53,7 @@ func NewDeployedStream(options NewDeployedStreamOptions) (*DeployedStream, error
 		return nil, err
 	}
 
-	return &DeployedStream{
+	return &Stream{
 		StreamId:  streamId,
 		_deployer: deployer,
 		DBID:      dbid,
@@ -61,11 +61,11 @@ func NewDeployedStream(options NewDeployedStreamOptions) (*DeployedStream, error
 	}, nil
 }
 
-func (s DeployedStream) GetSchema(ctx context.Context) (*types.Schema, error) {
+func (s Stream) GetSchema(ctx context.Context) (*types.Schema, error) {
 	return s._client.GetSchema(ctx, s.DBID)
 }
 
-func (s DeployedStream) GetType(ctx context.Context) (StreamType, error) {
+func (s Stream) GetType(ctx context.Context) (StreamType, error) {
 	if s._type != "" {
 		return s._type, nil
 	}
@@ -81,7 +81,7 @@ func (s DeployedStream) GetType(ctx context.Context) (StreamType, error) {
 
 	if len(values) == 0 {
 		// type can't ever be disabled
-		return "", fmt.Errorf("No type found. Is the stream initialized?")
+		return "", fmt.Errorf("no type found, check if the stream is initialized")
 	}
 
 	switch values[0].ValueS {
@@ -90,13 +90,13 @@ func (s DeployedStream) GetType(ctx context.Context) (StreamType, error) {
 	case "primitive":
 		s._type = StreamTypePrimitive
 	default:
-		return "", fmt.Errorf("Unknown stream type: %s", values[0].ValueS)
+		return "", fmt.Errorf("unknown stream type: %s", values[0].ValueS)
 	}
 
 	return s._type, nil
 }
 
-func (s DeployedStream) GetStreamOwner(ctx context.Context) ([]byte, error) {
+func (s Stream) GetStreamOwner(ctx context.Context) ([]byte, error) {
 	if s._owner != nil {
 		return s._owner, nil
 	}
