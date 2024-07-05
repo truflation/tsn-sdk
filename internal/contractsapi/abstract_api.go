@@ -1,29 +1,29 @@
-package tsn_api
+package contractsapi
 
 import (
 	"context"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/pkg/errors"
-	"github.com/truflation/tsn-sdk/internal/utils"
+	"github.com/truflation/tsn-sdk/internal/util"
 )
 
-func (s Stream) AllowReadWallet(ctx context.Context, wallet utils.EthereumAddress) (transactions.TxHash, error) {
+func (s Stream) AllowReadWallet(ctx context.Context, wallet util.EthereumAddress) (transactions.TxHash, error) {
 	return s.insertMetadata(ctx, AllowReadWalletKey, NewMetadataValue(wallet.Address()))
 }
 
-func (s Stream) DisableReadWallet(ctx context.Context, wallet utils.EthereumAddress) (transactions.TxHash, error) {
+func (s Stream) DisableReadWallet(ctx context.Context, wallet util.EthereumAddress) (transactions.TxHash, error) {
 	return s.disableMetadataByRef(ctx, AllowReadWalletKey, wallet.Address())
 }
 
-func (s Stream) AllowComposeStream(ctx context.Context, streamId utils.StreamId) (transactions.TxHash, error) {
+func (s Stream) AllowComposeStream(ctx context.Context, streamId util.StreamId) (transactions.TxHash, error) {
 	return s.insertMetadata(ctx, AllowComposeStreamKey, NewMetadataValue(streamId.String()))
 }
 
-func (s Stream) DisableComposeStream(ctx context.Context, streamId utils.StreamId) (transactions.TxHash, error) {
+func (s Stream) DisableComposeStream(ctx context.Context, streamId util.StreamId) (transactions.TxHash, error) {
 	return s.disableMetadataByRef(ctx, AllowComposeStreamKey, streamId.String())
 }
 
-func (s Stream) GetComposeVisibility(ctx context.Context) (*utils.VisibilityEnum, error) {
+func (s Stream) GetComposeVisibility(ctx context.Context) (*util.VisibilityEnum, error) {
 	results, err := s.getMetadata(ctx, GetMetadataParams{
 		Key:        ComposeVisibilityKey,
 		OnlyLatest: true,
@@ -45,7 +45,7 @@ func (s Stream) GetComposeVisibility(ctx context.Context) (*utils.VisibilityEnum
 		return nil, err
 	}
 
-	visibility, err := utils.NewVisibilityEnum(value.(int))
+	visibility, err := util.NewVisibilityEnum(value.(int))
 
 	if err != nil {
 		return nil, err
@@ -54,11 +54,11 @@ func (s Stream) GetComposeVisibility(ctx context.Context) (*utils.VisibilityEnum
 	return &visibility, nil
 }
 
-func (s Stream) SetComposeVisibility(ctx context.Context, visibility utils.VisibilityEnum) (transactions.TxHash, error) {
+func (s Stream) SetComposeVisibility(ctx context.Context, visibility util.VisibilityEnum) (transactions.TxHash, error) {
 	return s.insertMetadata(ctx, ComposeVisibilityKey, NewMetadataValue(int(visibility)))
 }
 
-func (s Stream) GetReadVisibility(ctx context.Context) (*utils.VisibilityEnum, error) {
+func (s Stream) GetReadVisibility(ctx context.Context) (*util.VisibilityEnum, error) {
 	values, err := s.getMetadata(ctx, GetMetadataParams{
 		Key:        ReadVisibilityKey,
 		OnlyLatest: true,
@@ -75,7 +75,7 @@ func (s Stream) GetReadVisibility(ctx context.Context) (*utils.VisibilityEnum, e
 		return nil, nil
 	}
 
-	visibility, err := utils.NewVisibilityEnum(values[0].ValueI)
+	visibility, err := util.NewVisibilityEnum(values[0].ValueI)
 
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func (s Stream) GetReadVisibility(ctx context.Context) (*utils.VisibilityEnum, e
 	return &visibility, nil
 }
 
-func (s Stream) GetAllowedReadWallets(ctx context.Context) ([]utils.EthereumAddress, error) {
+func (s Stream) GetAllowedReadWallets(ctx context.Context) ([]util.EthereumAddress, error) {
 	results, err := s.getMetadata(ctx, GetMetadataParams{
 		Key: AllowReadWalletKey,
 	})
@@ -93,7 +93,7 @@ func (s Stream) GetAllowedReadWallets(ctx context.Context) ([]utils.EthereumAddr
 		return nil, err
 	}
 
-	wallets := make([]utils.EthereumAddress, len(results))
+	wallets := make([]util.EthereumAddress, len(results))
 
 	for i, result := range results {
 		value, err := result.GetValueByKey(AllowReadWalletKey)
@@ -101,7 +101,7 @@ func (s Stream) GetAllowedReadWallets(ctx context.Context) ([]utils.EthereumAddr
 			return nil, err
 		}
 
-		address, err := utils.NewEthereumAddress(value.(string))
+		address, err := util.NewEthereumAddress(value.(string))
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +112,7 @@ func (s Stream) GetAllowedReadWallets(ctx context.Context) ([]utils.EthereumAddr
 	return wallets, nil
 }
 
-func (s Stream) GetAllowedComposeStreams(ctx context.Context) ([]utils.StreamId, error) {
+func (s Stream) GetAllowedComposeStreams(ctx context.Context) ([]util.StreamId, error) {
 	results, err := s.getMetadata(ctx, GetMetadataParams{
 		Key: AllowComposeStreamKey,
 	})
@@ -121,7 +121,7 @@ func (s Stream) GetAllowedComposeStreams(ctx context.Context) ([]utils.StreamId,
 		return nil, err
 	}
 
-	streams := make([]utils.StreamId, len(results))
+	streams := make([]util.StreamId, len(results))
 
 	for i, result := range results {
 		value, err := result.GetValueByKey(AllowComposeStreamKey)
@@ -129,7 +129,7 @@ func (s Stream) GetAllowedComposeStreams(ctx context.Context) ([]utils.StreamId,
 			return nil, err
 		}
 
-		streamId, err := utils.NewStreamId(value.(string))
+		streamId, err := util.NewStreamId(value.(string))
 
 		if err != nil {
 			return nil, err
@@ -141,7 +141,7 @@ func (s Stream) GetAllowedComposeStreams(ctx context.Context) ([]utils.StreamId,
 	return streams, nil
 }
 
-func (s Stream) SetReadVisibility(ctx context.Context, visibility utils.VisibilityEnum) (transactions.TxHash, error) {
+func (s Stream) SetReadVisibility(ctx context.Context, visibility util.VisibilityEnum) (transactions.TxHash, error) {
 	return s.insertMetadata(ctx, ReadVisibilityKey, NewMetadataValue(int(visibility)))
 }
 

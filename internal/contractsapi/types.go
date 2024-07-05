@@ -1,4 +1,4 @@
-package tsn_api
+package contractsapi
 
 import "fmt"
 

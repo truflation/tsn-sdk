@@ -1,9 +1,9 @@
-package tsn_api
+package contractsapi
 
 import (
 	"context"
 	"fmt"
-	apd "github.com/cockroachdb/apd/v3"
+	"github.com/cockroachdb/apd/v3"
 	"github.com/golang-sql/civil"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"strconv"
@@ -26,7 +26,7 @@ const (
 	ErrorStreamNotPrimitive = "stream is not a primitive stream"
 )
 
-func DeployedPrimitiveStreamFromDeployedStream(ctx context.Context, stream Stream) (*PrimitiveStream, error) {
+func PrimitiveStreamFromStream(ctx context.Context, stream Stream) (*PrimitiveStream, error) {
 	streamType, err := stream.GetType(ctx)
 
 	if err != nil {
@@ -41,12 +41,12 @@ func DeployedPrimitiveStreamFromDeployedStream(ctx context.Context, stream Strea
 	}, nil
 }
 
-func NewDeployedPrimitiveStream(ctx context.Context, options NewStreamOptions) (*PrimitiveStream, error) {
+func NewPrimitiveStream(ctx context.Context, options NewStreamOptions) (*PrimitiveStream, error) {
 	stream, err := NewStream(options)
 	if err != nil {
 		return nil, err
 	}
-	return DeployedPrimitiveStreamFromDeployedStream(ctx, *stream)
+	return PrimitiveStreamFromStream(ctx, *stream)
 }
 
 type InsertRecordInput struct {

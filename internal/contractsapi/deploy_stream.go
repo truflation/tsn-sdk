@@ -1,4 +1,4 @@
-package tsn_api
+package contractsapi
 
 import (
 	"context"
@@ -8,14 +8,14 @@ import (
 	"github.com/kwilteam/kwil-db/parse"
 	"github.com/pkg/errors"
 	"github.com/truflation/tsn-sdk/internal/contracts"
-	"github.com/truflation/tsn-sdk/internal/utils"
+	"github.com/truflation/tsn-sdk/internal/util"
 )
 
 type DeployStreamInput struct {
-	StreamId   utils.StreamId
-	StreamType StreamType
-	KwilClient client.Client
-	Deployer   []byte
+	StreamId   util.StreamId `validate:"required"`
+	StreamType StreamType    `validate:"required"`
+	KwilClient client.Client `validate:"required"`
+	Deployer   []byte        `validate:"required"`
 }
 
 type DeployStreamOutput struct {

@@ -1,16 +1,16 @@
-package tsn_api
+package contractsapi
 
 import (
 	"context"
 	"github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
-	"github.com/truflation/tsn-sdk/internal/utils"
+	"github.com/truflation/tsn-sdk/internal/util"
 )
 import "github.com/go-playground/validator/v10"
 
 type DestroyStreamInput struct {
-	StreamId   utils.StreamId `validate:"required"`
-	KwilClient client.Client  `validate:"required"`
+	StreamId   util.StreamId `validate:"required"`
+	KwilClient client.Client `validate:"required"`
 }
 
 func (i DestroyStreamInput) Validate() error {

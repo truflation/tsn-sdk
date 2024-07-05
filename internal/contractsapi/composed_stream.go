@@ -1,9 +1,9 @@
-package tsn_api
+package contractsapi
 
 import (
 	"context"
 	"fmt"
-	"github.com/truflation/tsn-sdk/internal/utils"
+	"github.com/truflation/tsn-sdk/internal/util"
 )
 
 /*
@@ -22,7 +22,7 @@ const (
 	ErrorStreamNotComposed = "stream is not a composed stream"
 )
 
-func DeployedComposedStreamFromDeployedStream(ctx context.Context, stream Stream) (*ComposedStream, error) {
+func ComposedStreamFromStream(ctx context.Context, stream Stream) (*ComposedStream, error) {
 	streamType, err := stream.GetType(ctx)
 
 	if err != nil {
@@ -37,13 +37,13 @@ func DeployedComposedStreamFromDeployedStream(ctx context.Context, stream Stream
 	}, nil
 }
 
-func NewDeployedComposedStream(ctx context.Context, opts NewStreamOptions) (*ComposedStream, error) {
+func NewComposedStream(ctx context.Context, opts NewStreamOptions) (*ComposedStream, error) {
 	stream, err := NewStream(opts)
 	if err != nil {
 		return nil, err
 	}
 
-	return DeployedComposedStreamFromDeployedStream(ctx, *stream)
+	return ComposedStreamFromStream(ctx, *stream)
 }
 
 type DescribeTaxonomiesParams struct {
@@ -51,8 +51,8 @@ type DescribeTaxonomiesParams struct {
 }
 
 type DescribeTaxonomiesResult struct {
-	ChildStreamId     utils.StreamId `json:"child_stream_id"`
-	ChildDataProvider string         `json:"child_data_provider"`
+	ChildStreamId     util.StreamId `json:"child_stream_id"`
+	ChildDataProvider string        `json:"child_data_provider"`
 	// decimals are received as strings by kwil to avoid precision loss
 	// as decimal are more arbitrary than golang's float64
 	Weight    string `json:"weight"`

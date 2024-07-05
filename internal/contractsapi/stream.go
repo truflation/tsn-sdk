@@ -1,4 +1,4 @@
-package tsn_api
+package contractsapi
 
 import (
 	"context"
@@ -7,14 +7,14 @@ import (
 	"github.com/kwilteam/kwil-db/core/types"
 	"github.com/kwilteam/kwil-db/core/types/client"
 	kwilUtils "github.com/kwilteam/kwil-db/core/utils"
-	"github.com/truflation/tsn-sdk/internal/utils"
+	"github.com/truflation/tsn-sdk/internal/util"
 	"strings"
 )
 
 // ## Initializations
 
 type Stream struct {
-	StreamId  utils.StreamId
+	StreamId  util.StreamId
 	_type     StreamType
 	_deployer []byte
 	_owner    []byte
@@ -24,7 +24,7 @@ type Stream struct {
 
 type NewStreamOptions struct {
 	Client   client.Client
-	StreamId utils.StreamId
+	StreamId util.StreamId
 	Deployer []byte
 }
 
@@ -59,6 +59,14 @@ func NewStream(options NewStreamOptions) (*Stream, error) {
 		DBID:      dbid,
 		_client:   optClient,
 	}, nil
+}
+
+func (s *Stream) ToComposedStream(ctx context.Context) (*ComposedStream, error) {
+	return ComposedStreamFromStream(ctx, *s)
+}
+
+func (s *Stream) ToPrimitiveStream(ctx context.Context) (*PrimitiveStream, error) {
+	return PrimitiveStreamFromStream(ctx, *s)
 }
 
 func (s Stream) GetSchema(ctx context.Context) (*types.Schema, error) {

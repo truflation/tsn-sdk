@@ -3,14 +3,14 @@ package integration
 import (
 	"context"
 	"github.com/golang-sql/civil"
-	"github.com/kwilteam/kwil-db/core/client"
 	"github.com/kwilteam/kwil-db/core/crypto"
 	"github.com/kwilteam/kwil-db/core/crypto/auth"
-	clientType "github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/stretchr/testify/assert"
-	tsn_api "github.com/truflation/tsn-sdk/internal/contracts-api"
-	"github.com/truflation/tsn-sdk/internal/utils"
+	tsnApi "github.com/truflation/tsn-sdk/internal/contractsapi"
+	tsnClient "github.com/truflation/tsn-sdk/internal/tsnclient"
+	tsnClientType "github.com/truflation/tsn-sdk/internal/types"
+	"github.com/truflation/tsn-sdk/internal/util"
 	"testing"
 	"time"
 )
@@ -22,75 +22,58 @@ func TestBasicDeployment(t *testing.T) {
 	ctx := context.Background()
 
 	pk, err := crypto.Secp256k1PrivateKeyFromHex(TestPrivateKey)
-	if !assert.NoError(t, err, "Failed to parse private key") {
-		t.FailNow()
-	}
+	assertNoErrorOrFail(t, err, "Failed to parse private key")
 
 	signer := &auth.EthPersonalSigner{Key: *pk}
-	kwilClient, err := client.NewClient(ctx, TestKwilProvider, &clientType.Options{
-		Signer: signer,
-	})
-	if !assert.NoError(t, err, "Failed to create Kwil client") {
-		t.FailNow()
-	}
+	tsnClient, err := tsnClient.NewClient(ctx, TestKwilProvider, tsnClient.WithSigner(signer))
+	assertNoErrorOrFail(t, err, "Failed to create Kwil client")
 
-	streamId := utils.GenerateStreamId("test-basic-deployment")
+	streamId := util.GenerateStreamId("test-basic-deployment")
 
 	t.Cleanup(func() {
-		destroyResult, err := tsn_api.DestroyStream(ctx, tsn_api.DestroyStreamInput{
-			StreamId:   streamId,
-			KwilClient: kwilClient,
-		})
+		destroyResult, err := tsnClient.DestroyStream(ctx, streamId)
 		assert.NoError(t, err, "Failed to destroy stream")
-		expectSuccessTx(t, ctx, *kwilClient, destroyResult.TxHash)
+		expectSuccessTx(t, ctx, tsnClient, destroyResult)
 	})
 
 	t.Run("Deploy Primitive, insert record and query", func(t *testing.T) {
 
-		deployOutput, err := tsn_api.DeployStream(ctx, tsn_api.DeployStreamInput{
-			StreamId:   streamId,
-			StreamType: tsn_api.StreamTypePrimitive,
-			KwilClient: kwilClient,
-			Deployer:   signer.Identity(),
-		})
-		if !assert.NoError(t, err, "Failed to deploy stream") {
-			t.FailNow()
-		}
+		// Deploy a primitive stream
+		deployTxHash, err := tsnClient.DeployStream(ctx, streamId, tsnApi.StreamTypePrimitive)
+		// expect ok
+		assertNoErrorOrFail(t, err, "Failed to deploy stream")
+		expectSuccessTx(t, ctx, tsnClient, deployTxHash)
 
-		expectSuccessTx(t, ctx, *kwilClient, deployOutput.TxHash)
+		// Load the deployed stream
+		deployedStream, err := tsnClient.LoadStream(ctx, streamId)
+		// expect ok
+		assertNoErrorOrFail(t, err, "Failed to load stream")
 
-		txHashInit, err := deployOutput.DeployedStream.InitializeStream(ctx)
-		if !assert.NoError(t, err, "Failed to initialize stream") {
-			t.FailNow()
-		}
+		// Initialize the stream
+		txHashInit, err := deployedStream.InitializeStream(ctx)
+		// expect ok
+		assertNoErrorOrFail(t, err, "Failed to initialize stream")
+		expectSuccessTx(t, ctx, tsnClient, txHashInit)
 
-		expectSuccessTx(t, ctx, *kwilClient, txHashInit)
+		// Create a deployed primitive stream
+		deployedPrimitiveStream, err := deployedStream.ToPrimitiveStream(ctx)
+		// expect ok
+		assertNoErrorOrFail(t, err, "Failed to create deployed primitive stream")
 
-		deployedPrimitiveStream, err := tsn_api.DeployedPrimitiveStreamFromDeployedStream(ctx, deployOutput.DeployedStream)
-
-		if !assert.NoError(t, err, "Failed to create deployed primitive stream") {
-			t.FailNow()
-		}
-
-		txHash, err := deployedPrimitiveStream.InsertRecords(ctx, []tsn_api.InsertRecordInput{
+		txHash, err := deployedPrimitiveStream.InsertRecords(ctx, []tsnApi.InsertRecordInput{
 			{
 				Value:     1,
 				DateValue: *unsafeParseDate("2020-01-01"),
 			},
 		})
-		if !assert.NoError(t, err, "Failed to insert record") {
-			t.FailNow()
-		}
+		assertNoErrorOrFail(t, err, "Failed to insert record")
+		expectSuccessTx(t, ctx, tsnClient, txHash)
 
-		expectSuccessTx(t, ctx, *kwilClient, txHash)
-
-		records, err := deployedPrimitiveStream.GetRecords(ctx, tsn_api.GetRecordsInput{
+		records, err := deployedPrimitiveStream.GetRecords(ctx, tsnApi.GetRecordsInput{
 			DateFrom: unsafeParseDate("2020-01-01"),
 			DateTo:   unsafeParseDate("2021-01-01"),
 		})
-		if !assert.NoError(t, err, "Failed to query records") {
-			t.FailNow()
-		}
+		assertNoErrorOrFail(t, err, "Failed to query records")
 
 		assert.Len(t, records, 1, "Expected exactly one record")
 		assert.Equal(t, "1.000", records[0].Value.String(), "Unexpected record value")
@@ -98,6 +81,13 @@ func TestBasicDeployment(t *testing.T) {
 	})
 }
 
+/*
+ * ----------------------------------------------------------------------------
+ * 		Helper functions
+ * ----------------------------------------------------------------------------
+ */
+
+// unsafeParseDate is a helper function to parse a date string into a civil.Date, panicking on error.
 func unsafeParseDate(dateStr string) *civil.Date {
 	date, err := civil.ParseDate(dateStr)
 	if err != nil {
@@ -106,12 +96,18 @@ func unsafeParseDate(dateStr string) *civil.Date {
 	return &date
 }
 
-func expectSuccessTx(t *testing.T, ctx context.Context, client client.Client, txHash transactions.TxHash) {
-	txRes, err := client.WaitTx(ctx, txHash, time.Second)
-	if !assert.NoError(t, err, "Transaction failed") {
+// expectSuccessTx waits for a transaction to be successful, failing the test if it fails.
+func expectSuccessTx(t *testing.T, ctx context.Context, client tsnClientType.Client, txHash transactions.TxHash) {
+	txRes, err := client.WaitForTx(ctx, txHash, time.Second)
+	assertNoErrorOrFail(t, err, "Transaction failed")
+	if !assert.Equal(t, transactions.CodeOk, transactions.TxCode(txRes.TxResult.Code), "Transaction code not OK: %s", txRes.TxResult.Log) {
 		t.FailNow()
 	}
-	if !assert.Equal(t, transactions.CodeOk, transactions.TxCode(txRes.TxResult.Code), "Transaction code not OK: %s", txRes.TxResult.Log) {
+}
+
+// assertNoErrorOrFail asserts that an error is nil, failing the test if it is not.
+func assertNoErrorOrFail(t *testing.T, err error, msg string) {
+	if !assert.NoError(t, err, msg) {
 		t.FailNow()
 	}
 }
