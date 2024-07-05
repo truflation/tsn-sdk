@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cockroachdb/apd/v3"
 	"github.com/golang-sql/civil"
+	"github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"strconv"
 	"time"
@@ -26,27 +27,60 @@ const (
 	ErrorStreamNotPrimitive = "stream is not a primitive stream"
 )
 
-func PrimitiveStreamFromStream(ctx context.Context, stream Stream) (*PrimitiveStream, error) {
-	streamType, err := stream.GetType(ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if streamType != StreamTypePrimitive {
-		return nil, fmt.Errorf(ErrorStreamNotPrimitive)
-	}
+func PrimitiveStreamFromStream(stream Stream) (*PrimitiveStream, error) {
 	return &PrimitiveStream{
 		Stream: stream,
 	}, nil
 }
 
-func NewPrimitiveStream(ctx context.Context, options NewStreamOptions) (*PrimitiveStream, error) {
+func NewPrimitiveStream(options NewStreamOptions) (*PrimitiveStream, error) {
 	stream, err := NewStream(options)
 	if err != nil {
 		return nil, err
 	}
-	return PrimitiveStreamFromStream(ctx, *stream)
+	return PrimitiveStreamFromStream(*stream)
+}
+
+// checkValidPrimitiveStream checks if the stream is a valid primitive stream
+// and returns an error if it is not. Valid means:
+// - the stream is initialized
+// - the stream is a primitive stream
+func (p *PrimitiveStream) checkValidPrimitiveStream(ctx context.Context) error {
+	// first check if is initialized
+	err := p.checkInitialized(ctx)
+	if err != nil {
+		return err
+	}
+
+	// then check if is primitive
+	streamType, err := p.GetType(ctx)
+	if err != nil {
+		return err
+	}
+
+	if streamType != StreamTypePrimitive {
+		return fmt.Errorf(ErrorStreamNotPrimitive)
+	}
+
+	return nil
+}
+
+func (p *PrimitiveStream) call(ctx context.Context, method string, args []any) (*client.CallResult, error) {
+	err := p.checkValidPrimitiveStream(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return p._client.Call(ctx, p.DBID, method, args)
+}
+
+func (p *PrimitiveStream) execute(ctx context.Context, method string, args [][]any) (transactions.TxHash, error) {
+	err := p.checkValidPrimitiveStream(ctx)
+	if err != nil {
+		return transactions.TxHash{}, err
+	}
+
+	return p._client.Execute(ctx, p.DBID, method, args)
 }
 
 type InsertRecordInput struct {
@@ -54,7 +88,12 @@ type InsertRecordInput struct {
 	Value     int
 }
 
-func (s *PrimitiveStream) InsertRecords(ctx context.Context, inputs []InsertRecordInput) (transactions.TxHash, error) {
+func (p *PrimitiveStream) InsertRecords(ctx context.Context, inputs []InsertRecordInput) (transactions.TxHash, error) {
+	err := p.checkValidPrimitiveStream(ctx)
+	if err != nil {
+		return transactions.TxHash{}, err
+	}
+
 	var args [][]any
 	for _, input := range inputs {
 
@@ -66,7 +105,7 @@ func (s *PrimitiveStream) InsertRecords(ctx context.Context, inputs []InsertReco
 		})
 	}
 
-	return s._client.Execute(ctx, s.DBID, "insert_record", args)
+	return p.execute(ctx, "insert_record", args)
 }
 
 type GetRecordOutput struct {
@@ -93,13 +132,18 @@ func transformOrNil[T any](value *T, transform func(T) any) any {
 	return transform(*value)
 }
 
-func (s *PrimitiveStream) GetRecords(ctx context.Context, input GetRecordsInput) ([]GetRecordOutput, error) {
+func (p *PrimitiveStream) GetRecords(ctx context.Context, input GetRecordsInput) ([]GetRecordOutput, error) {
+	err := p.checkValidPrimitiveStream(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	var args []any
 	args = append(args, transformOrNil(input.DateFrom, func(date civil.Date) any { return date.String() }))
 	args = append(args, transformOrNil(input.DateTo, func(date civil.Date) any { return date.String() }))
 	args = append(args, transformOrNil(input.FrozenAt, func(date time.Time) any { return date.UTC().Format(time.RFC3339) }))
 
-	results, err := s._client.Call(ctx, s.DBID, "get_record", args)
+	results, err := p.call(ctx, "get_record", args)
 	if err != nil {
 		return nil, err
 	}

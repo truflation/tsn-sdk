@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/kwilteam/kwil-db/core/types"
 	"github.com/kwilteam/kwil-db/core/types/client"
+	"github.com/kwilteam/kwil-db/core/types/transactions"
 	kwilUtils "github.com/kwilteam/kwil-db/core/utils"
 	"github.com/truflation/tsn-sdk/internal/util"
 	"strings"
@@ -14,12 +15,14 @@ import (
 // ## Initializations
 
 type Stream struct {
-	StreamId  util.StreamId
-	_type     StreamType
-	_deployer []byte
-	_owner    []byte
-	DBID      string
-	_client   client.Client
+	StreamId     util.StreamId
+	_type        StreamType
+	_deployer    []byte
+	_owner       []byte
+	DBID         string
+	_client      client.Client
+	_initialized bool
+	_deployed    bool
 }
 
 type NewStreamOptions struct {
@@ -61,19 +64,19 @@ func NewStream(options NewStreamOptions) (*Stream, error) {
 	}, nil
 }
 
-func (s *Stream) ToComposedStream(ctx context.Context) (*ComposedStream, error) {
-	return ComposedStreamFromStream(ctx, *s)
+func (s *Stream) ToComposedStream() (*ComposedStream, error) {
+	return ComposedStreamFromStream(*s)
 }
 
-func (s *Stream) ToPrimitiveStream(ctx context.Context) (*PrimitiveStream, error) {
-	return PrimitiveStreamFromStream(ctx, *s)
+func (s *Stream) ToPrimitiveStream() (*PrimitiveStream, error) {
+	return PrimitiveStreamFromStream(*s)
 }
 
-func (s Stream) GetSchema(ctx context.Context) (*types.Schema, error) {
+func (s *Stream) GetSchema(ctx context.Context) (*types.Schema, error) {
 	return s._client.GetSchema(ctx, s.DBID)
 }
 
-func (s Stream) GetType(ctx context.Context) (StreamType, error) {
+func (s *Stream) GetType(ctx context.Context) (StreamType, error) {
 	if s._type != "" {
 		return s._type, nil
 	}
@@ -104,7 +107,7 @@ func (s Stream) GetType(ctx context.Context) (StreamType, error) {
 	return s._type, nil
 }
 
-func (s Stream) GetStreamOwner(ctx context.Context) ([]byte, error) {
+func (s *Stream) GetStreamOwner(ctx context.Context) ([]byte, error) {
 	if s._owner != nil {
 		return s._owner, nil
 	}
@@ -130,4 +133,60 @@ func (s Stream) GetStreamOwner(ctx context.Context) ([]byte, error) {
 	}
 
 	return s._owner, nil
+}
+
+func (s *Stream) checkInitialized(ctx context.Context) error {
+	if s._initialized {
+		return nil
+	}
+
+	// check if is deployed
+	err := s.checkDeployed(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	// check if is initialized by trying to get its type
+	_, err = s.GetType(ctx)
+	if err != nil {
+		return fmt.Errorf("check if the stream is initialized: %w", err)
+	}
+
+	s._initialized = true
+
+	return nil
+}
+
+func (s *Stream) checkDeployed(ctx context.Context) error {
+	if s._deployed {
+		return nil
+	}
+
+	_, err := s.GetSchema(ctx)
+	if err != nil {
+		return fmt.Errorf("check if the stream is deployed: %w", err)
+	}
+
+	s._deployed = true
+
+	return nil
+}
+
+func (s *Stream) call(ctx context.Context, method string, args []any) (*client.CallResult, error) {
+	err := s.checkInitialized(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return s._client.Call(ctx, s.DBID, method, args)
+}
+
+func (s *Stream) execute(ctx context.Context, method string, args [][]any) (transactions.TxHash, error) {
+	err := s.checkInitialized(ctx)
+	if err != nil {
+		return transactions.TxHash{}, err
+	}
+
+	return s._client.Execute(ctx, s.DBID, method, args)
 }

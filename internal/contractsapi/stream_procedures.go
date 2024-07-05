@@ -58,7 +58,7 @@ func addArgOrNull(oldArgs []any, newArg any, nullIfZero bool) []any {
 	return append(oldArgs, newArg)
 }
 
-func (s Stream) getMetadata(ctx context.Context, params GetMetadataParams) ([]GetMetadataResult, error) {
+func (s *Stream) getMetadata(ctx context.Context, params GetMetadataParams) ([]GetMetadataResult, error) {
 
 	var args []any
 
@@ -67,7 +67,7 @@ func (s Stream) getMetadata(ctx context.Context, params GetMetadataParams) ([]Ge
 	// just add null if ref is empty, because it's optional
 	args = addArgOrNull(args, params.Ref, true)
 
-	res, err := s._client.Call(ctx, s.DBID, "get_metadata", args)
+	res, err := s.call(ctx, "get_metadata", args)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ type metadataInput struct {
 	Value MetadataValue
 }
 
-func (s Stream) BatchInsertMetadata(ctx context.Context, inputs []metadataInput) (transactions.TxHash, error) {
+func (s *Stream) BatchInsertMetadata(ctx context.Context, inputs []metadataInput) (transactions.TxHash, error) {
 	var tuples [][]any
 	for _, input := range inputs {
 		valType := input.Key.GetType()
@@ -95,17 +95,17 @@ func (s Stream) BatchInsertMetadata(ctx context.Context, inputs []metadataInput)
 		tuples = append(tuples, []any{input.Key.String(), valStr, string(valType)})
 	}
 
-	return s._client.Execute(ctx, s.DBID, "insert_metadata", tuples)
+	return s.execute(ctx, "insert_metadata", tuples)
 }
 
-func (s Stream) insertMetadata(ctx context.Context, key MetadataKey, value MetadataValue) (transactions.TxHash, error) {
+func (s *Stream) insertMetadata(ctx context.Context, key MetadataKey, value MetadataValue) (transactions.TxHash, error) {
 	return s.BatchInsertMetadata(ctx, []metadataInput{{key, value}})
 }
 
-func (s Stream) disableMetadata(ctx context.Context, rowId string) (transactions.TxHash, error) {
-	return s._client.Execute(ctx, s.DBID, "disable_metadata", [][]any{{rowId}})
+func (s *Stream) disableMetadata(ctx context.Context, rowId string) (transactions.TxHash, error) {
+	return s.execute(ctx, "disable_metadata", [][]any{{rowId}})
 }
 
-func (s Stream) InitializeStream(ctx context.Context) (transactions.TxHash, error) {
-	return s._client.Execute(ctx, s.DBID, "init", nil)
+func (s *Stream) InitializeStream(ctx context.Context) (transactions.TxHash, error) {
+	return s.execute(ctx, "init", nil)
 }
