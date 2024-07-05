@@ -5,8 +5,8 @@ import (
 	"github.com/kwilteam/kwil-db/core/crypto"
 	"github.com/kwilteam/kwil-db/core/crypto/auth"
 	"github.com/stretchr/testify/assert"
-	"github.com/truflation/tsn-sdk/internal/contractsapi"
 	"github.com/truflation/tsn-sdk/internal/tsnclient"
+	"github.com/truflation/tsn-sdk/internal/types"
 	"github.com/truflation/tsn-sdk/internal/util"
 	"testing"
 )
@@ -26,15 +26,15 @@ func TestPrimitiveStream(t *testing.T) {
 	t.Cleanup(func() {
 		destroyResult, err := tsnClient.DestroyStream(ctx, streamId)
 		assertNoErrorOrFail(t, err, "Failed to destroy stream")
-		expectSuccessTx(t, ctx, tsnClient, destroyResult)
+		waitTxToBeMinedWithSuccess(t, ctx, tsnClient, destroyResult)
 	})
 
 	t.Run("Basic Primitive Stream", func(t *testing.T) {
 		// Deploy a primitive stream
-		deployTxHash, err := tsnClient.DeployStream(ctx, streamId, contractsapi.StreamTypePrimitive)
+		deployTxHash, err := tsnClient.DeployStream(ctx, streamId, types.StreamTypePrimitive)
 		// expect ok
 		assertNoErrorOrFail(t, err, "Failed to deploy stream")
-		expectSuccessTx(t, ctx, tsnClient, deployTxHash)
+		waitTxToBeMinedWithSuccess(t, ctx, tsnClient, deployTxHash)
 
 		// Load the deployed stream
 		deployedPrimitiveStream, err := tsnClient.LoadPrimitiveStream(streamId)
@@ -45,18 +45,18 @@ func TestPrimitiveStream(t *testing.T) {
 		txHashInit, err := deployedPrimitiveStream.InitializeStream(ctx)
 		// expect ok
 		assertNoErrorOrFail(t, err, "Failed to initialize stream")
-		expectSuccessTx(t, ctx, tsnClient, txHashInit)
+		waitTxToBeMinedWithSuccess(t, ctx, tsnClient, txHashInit)
 
-		txHash, err := deployedPrimitiveStream.InsertRecords(ctx, []contractsapi.InsertRecordInput{
+		txHash, err := deployedPrimitiveStream.InsertRecords(ctx, []types.InsertRecordInput{
 			{
 				Value:     1,
 				DateValue: *unsafeParseDate("2020-01-01"),
 			},
 		})
 		assertNoErrorOrFail(t, err, "Failed to insert record")
-		expectSuccessTx(t, ctx, tsnClient, txHash)
+		waitTxToBeMinedWithSuccess(t, ctx, tsnClient, txHash)
 
-		records, err := deployedPrimitiveStream.GetRecords(ctx, contractsapi.GetRecordsInput{
+		records, err := deployedPrimitiveStream.GetRecords(ctx, types.GetRecordsInput{
 			DateFrom: unsafeParseDate("2020-01-01"),
 			DateTo:   unsafeParseDate("2021-01-01"),
 		})

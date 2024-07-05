@@ -26,8 +26,8 @@ func unsafeParseDate(dateStr string) *civil.Date {
 	return &date
 }
 
-// expectSuccessTx waits for a transaction to be successful, failing the test if it fails.
-func expectSuccessTx(t *testing.T, ctx context.Context, client types.Client, txHash transactions.TxHash) {
+// waitTxToBeMinedWithSuccess waits for a transaction to be successful, failing the test if it fails.
+func waitTxToBeMinedWithSuccess(t *testing.T, ctx context.Context, client types.Client, txHash transactions.TxHash) {
 	txRes, err := client.WaitForTx(ctx, txHash, time.Second)
 	assertNoErrorOrFail(t, err, "Transaction failed")
 	if !assert.Equal(t, transactions.CodeOk, transactions.TxCode(txRes.TxResult.Code), "Transaction code not OK: %s", txRes.TxResult.Log) {
