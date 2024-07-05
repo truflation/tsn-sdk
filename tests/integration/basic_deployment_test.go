@@ -7,9 +7,9 @@ import (
 	"github.com/kwilteam/kwil-db/core/crypto/auth"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/stretchr/testify/assert"
-	tsnApi "github.com/truflation/tsn-sdk/internal/contractsapi"
-	tsnClient "github.com/truflation/tsn-sdk/internal/tsnclient"
-	tsnClientType "github.com/truflation/tsn-sdk/internal/types"
+	"github.com/truflation/tsn-sdk/internal/contractsapi"
+	"github.com/truflation/tsn-sdk/internal/tsnclient"
+	tsntype "github.com/truflation/tsn-sdk/internal/types"
 	"github.com/truflation/tsn-sdk/internal/util"
 	"testing"
 	"time"
@@ -25,7 +25,7 @@ func TestBasicDeployment(t *testing.T) {
 	assertNoErrorOrFail(t, err, "Failed to parse private key")
 
 	signer := &auth.EthPersonalSigner{Key: *pk}
-	tsnClient, err := tsnClient.NewClient(ctx, TestKwilProvider, tsnClient.WithSigner(signer))
+	tsnClient, err := tsnclient.NewClient(ctx, TestKwilProvider, tsnclient.WithSigner(signer))
 	assertNoErrorOrFail(t, err, "Failed to create Kwil client")
 
 	streamId := util.GenerateStreamId("test-basic-deployment")
@@ -39,7 +39,7 @@ func TestBasicDeployment(t *testing.T) {
 	t.Run("Deploy Primitive, insert record and query", func(t *testing.T) {
 
 		// Deploy a primitive stream
-		deployTxHash, err := tsnClient.DeployStream(ctx, streamId, tsnApi.StreamTypePrimitive)
+		deployTxHash, err := tsnClient.DeployStream(ctx, streamId, contractsapi.StreamTypePrimitive)
 		// expect ok
 		assertNoErrorOrFail(t, err, "Failed to deploy stream")
 		expectSuccessTx(t, ctx, tsnClient, deployTxHash)
@@ -60,7 +60,7 @@ func TestBasicDeployment(t *testing.T) {
 		// expect ok
 		assertNoErrorOrFail(t, err, "Failed to create deployed primitive stream")
 
-		txHash, err := deployedPrimitiveStream.InsertRecords(ctx, []tsnApi.InsertRecordInput{
+		txHash, err := deployedPrimitiveStream.InsertRecords(ctx, []contractsapi.InsertRecordInput{
 			{
 				Value:     1,
 				DateValue: *unsafeParseDate("2020-01-01"),
@@ -69,7 +69,7 @@ func TestBasicDeployment(t *testing.T) {
 		assertNoErrorOrFail(t, err, "Failed to insert record")
 		expectSuccessTx(t, ctx, tsnClient, txHash)
 
-		records, err := deployedPrimitiveStream.GetRecords(ctx, tsnApi.GetRecordsInput{
+		records, err := deployedPrimitiveStream.GetRecords(ctx, contractsapi.GetRecordsInput{
 			DateFrom: unsafeParseDate("2020-01-01"),
 			DateTo:   unsafeParseDate("2021-01-01"),
 		})
@@ -97,7 +97,7 @@ func unsafeParseDate(dateStr string) *civil.Date {
 }
 
 // expectSuccessTx waits for a transaction to be successful, failing the test if it fails.
-func expectSuccessTx(t *testing.T, ctx context.Context, client tsnClientType.Client, txHash transactions.TxHash) {
+func expectSuccessTx(t *testing.T, ctx context.Context, client tsntype.Client, txHash transactions.TxHash) {
 	txRes, err := client.WaitForTx(ctx, txHash, time.Second)
 	assertNoErrorOrFail(t, err, "Transaction failed")
 	if !assert.Equal(t, transactions.CodeOk, transactions.TxCode(txRes.TxResult.Code), "Transaction code not OK: %s", txRes.TxResult.Log) {
