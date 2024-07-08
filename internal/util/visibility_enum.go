@@ -8,16 +8,16 @@ import (
 type VisibilityEnum int
 
 const (
-	Public  VisibilityEnum = 0
-	Private VisibilityEnum = 1
+	PublicVisibility  VisibilityEnum = 0
+	PrivateVisibility VisibilityEnum = 1
 )
 
 func NewVisibilityEnum(value int) (VisibilityEnum, error) {
 	switch value {
 	case 0:
-		return Public, nil
+		return PublicVisibility, nil
 	case 1:
-		return Private, nil
+		return PrivateVisibility, nil
 	default:
 		return 0, fmt.Errorf("invalid visibility value: %d", value)
 	}
@@ -33,9 +33,9 @@ func (v *VisibilityEnum) UnmarshalJSON(data []byte) error {
 
 	switch value {
 	case 0:
-		*v = Public
+		*v = PublicVisibility
 	case 1:
-		*v = Private
+		*v = PrivateVisibility
 	default:
 		return fmt.Errorf("invalid visibility value: %d", value)
 	}
