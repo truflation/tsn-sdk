@@ -62,55 +62,27 @@ func TestComposedStream(t *testing.T) {
 		// | 2020-01-01 | 1      | 3      |
 		// | 2020-01-02 | 2      | 4      |
 
-		childrenWithData := []struct {
-			id   util.StreamId
-			data []types.InsertRecordInput
-		}{
+		deployTestPrimitiveStreamWithData(t, ctx, tsnClient, childAStreamId, []types.InsertRecordInput{
 			{
-				id: childAStreamId,
-				data: []types.InsertRecordInput{
-					{
-						Value:     1,
-						DateValue: *unsafeParseDate("2020-01-01"),
-					},
-					{
-						Value:     2,
-						DateValue: *unsafeParseDate("2020-01-02"),
-					},
-				},
+				Value:     1,
+				DateValue: *unsafeParseDate("2020-01-01"),
 			},
 			{
-				id: childBStreamId,
-				data: []types.InsertRecordInput{
-					{
-						Value:     3,
-						DateValue: *unsafeParseDate("2020-01-01"),
-					},
-					{
-						Value:     4,
-						DateValue: *unsafeParseDate("2020-01-02"),
-					},
-				},
+				Value:     2,
+				DateValue: *unsafeParseDate("2020-01-02"),
 			},
-		}
+		})
 
-		// deploy and insert data to child streams
-		for _, child := range childrenWithData {
-			deployChildTxHash, err := tsnClient.DeployStream(ctx, child.id, types.StreamTypePrimitive)
-			assertNoErrorOrFail(t, err, "Failed to deploy child stream")
-			waitTxToBeMinedWithSuccess(t, ctx, tsnClient, deployChildTxHash)
-
-			deployedChildStream, err := tsnClient.LoadPrimitiveStream(child.id)
-			assertNoErrorOrFail(t, err, "Failed to load child stream")
-
-			txHashInitChild, err := deployedChildStream.InitializeStream(ctx)
-			assertNoErrorOrFail(t, err, "Failed to initialize child stream")
-			waitTxToBeMinedWithSuccess(t, ctx, tsnClient, txHashInitChild)
-
-			txHashInsert, err := deployedChildStream.InsertRecords(ctx, child.data)
-			assertNoErrorOrFail(t, err, "Failed to insert record")
-			waitTxToBeMinedWithSuccess(t, ctx, tsnClient, txHashInsert)
-		}
+		deployTestPrimitiveStreamWithData(t, ctx, tsnClient, childBStreamId, []types.InsertRecordInput{
+			{
+				Value:     3,
+				DateValue: *unsafeParseDate("2020-01-01"),
+			},
+			{
+				Value:     4,
+				DateValue: *unsafeParseDate("2020-01-02"),
+			},
+		})
 
 		// deploy taxonomies to the composed stream
 		// | childA | childB |

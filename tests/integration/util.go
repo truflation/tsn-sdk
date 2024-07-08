@@ -43,3 +43,65 @@ func assertNoErrorOrFail(t *testing.T, err error, msg string) {
 		t.FailNow()
 	}
 }
+
+func deployTestPrimitiveStreamWithData(
+	t *testing.T,
+	ctx context.Context,
+	tsnClient *tsnclient.Client,
+	streamId util.StreamId,
+	data []types.InsertRecordInput,
+) {
+	deployTxHash, err := tsnClient.DeployStream(ctx, streamId, types.StreamTypePrimitive)
+	assertNoErrorOrFail(t, err, "Failed to deploy stream")
+	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, deployTxHash)
+
+	address, err := util.NewEthereumAddressFromBytes(tsnClient.GetSigner().Identity())
+	assertNoErrorOrFail(t, err, "Failed to create signer address")
+
+	streamLocator := types.StreamLocator{
+		StreamId:     streamId,
+		DataProvider: address,
+	}
+
+	deployedStream, err := tsnClient.LoadPrimitiveStream(streamLocator)
+	assertNoErrorOrFail(t, err, "Failed to load stream")
+
+	txHashInit, err := deployedStream.InitializeStream(ctx)
+	assertNoErrorOrFail(t, err, "Failed to initialize stream")
+	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, txHashInit)
+
+	txHashInsert, err := deployedStream.InsertRecords(ctx, data)
+	assertNoErrorOrFail(t, err, "Failed to insert record")
+	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, txHashInsert)
+}
+
+func deployTestComposedStreamWithTaxonomy(
+	t *testing.T,
+	ctx context.Context,
+	tsnClient *tsnclient.Client,
+	streamId util.StreamId,
+	taxonomies []types.TaxonomyItem,
+) {
+	deployTxHash, err := tsnClient.DeployStream(ctx, streamId, types.StreamTypeComposed)
+	assertNoErrorOrFail(t, err, "Failed to deploy stream")
+	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, deployTxHash)
+
+	address, err := util.NewEthereumAddressFromBytes(tsnClient.GetSigner().Identity())
+	assertNoErrorOrFail(t, err, "Failed to create signer address")
+
+	streamLocator := types.StreamLocator{
+		StreamId:     streamId,
+		DataProvider: address,
+	}
+
+	deployedStream, err := tsnClient.LoadComposedStream(streamLocator)
+	assertNoErrorOrFail(t, err, "Failed to load stream")
+
+	txHashInit, err := deployedStream.InitializeStream(ctx)
+	assertNoErrorOrFail(t, err, "Failed to initialize stream")
+	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, txHashInit)
+
+	txHashTax, err := deployedStream.SetTaxonomy(ctx, taxonomies)
+	assertNoErrorOrFail(t, err, "Failed to set taxonomy")
+	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, txHashTax)
+}
