@@ -5,7 +5,9 @@ import (
 	"github.com/golang-sql/civil"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/stretchr/testify/assert"
+	"github.com/truflation/tsn-sdk/internal/tsnclient"
 	"github.com/truflation/tsn-sdk/internal/types"
+	"github.com/truflation/tsn-sdk/internal/util"
 	"testing"
 	"time"
 )
@@ -27,7 +29,7 @@ func unsafeParseDate(dateStr string) *civil.Date {
 }
 
 // waitTxToBeMinedWithSuccess waits for a transaction to be successful, failing the test if it fails.
-func waitTxToBeMinedWithSuccess(t *testing.T, ctx context.Context, client types.Client, txHash transactions.TxHash) {
+func waitTxToBeMinedWithSuccess(t *testing.T, ctx context.Context, client *tsnclient.Client, txHash transactions.TxHash) {
 	txRes, err := client.WaitForTx(ctx, txHash, time.Second)
 	assertNoErrorOrFail(t, err, "Transaction failed")
 	if !assert.Equal(t, transactions.CodeOk, transactions.TxCode(txRes.TxResult.Code), "Transaction code not OK: %s", txRes.TxResult.Log) {

@@ -12,6 +12,8 @@ type InsertRecordInput struct {
 }
 
 type IPrimitiveStream interface {
+	// IStream methods are also available in IPrimitiveStream
 	IStream
+	// InsertRecords inserts records into the stream
 	InsertRecords(ctx context.Context, inputs []InsertRecordInput) (transactions.TxHash, error)
 }
