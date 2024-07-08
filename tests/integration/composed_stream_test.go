@@ -40,7 +40,7 @@ func TestComposedStream(t *testing.T) {
 		}
 	})
 
-	t.Run("Basic Composed Stream", func(t *testing.T) {
+	t.Run("DeploymentAndReadOperations", func(t *testing.T) {
 		// Deploy a composed stream
 		deployTxHash, err := tsnClient.DeployStream(ctx, streamId, types.StreamTypeComposed)
 		// expect ok

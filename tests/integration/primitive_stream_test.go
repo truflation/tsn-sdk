@@ -30,7 +30,7 @@ func TestPrimitiveStream(t *testing.T) {
 		waitTxToBeMinedWithSuccess(t, ctx, tsnClient, destroyResult)
 	})
 
-	t.Run("Basic Primitive Stream", func(t *testing.T) {
+	t.Run("DeploymentWriteAndReadOperations", func(t *testing.T) {
 		// Deploy a primitive stream
 		deployTxHash, err := tsnClient.DeployStream(ctx, streamId, types.StreamTypePrimitive)
 		// expect ok
