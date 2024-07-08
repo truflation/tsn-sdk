@@ -120,7 +120,10 @@ func (c *ComposedStream) SetTaxonomy(ctx context.Context, taxonomies []types.Tax
 	)
 
 	for _, taxonomy := range taxonomies {
-		dataProviders = append(dataProviders, fmt.Sprintf("%s", taxonomy.ChildStream.DataProvider.Address()))
+		dataProviderHexString := taxonomy.ChildStream.DataProvider.Address()
+		// kwil expects no 0x prefix
+		dataProviderHex := dataProviderHexString[2:]
+		dataProviders = append(dataProviders, fmt.Sprintf("%s", dataProviderHex))
 		streamIDs = append(streamIDs, taxonomy.ChildStream.StreamId)
 		weights = append(weights, fmt.Sprintf("%f", taxonomy.Weight))
 	}

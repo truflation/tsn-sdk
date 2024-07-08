@@ -10,13 +10,20 @@ import (
 
 type EthereumAddress struct {
 	correctlyCreated bool
-	address          string
+	//
+	hex string
 }
 
 func NewEthereumAddressFromString(address string) (EthereumAddress, error) {
+	hexAddress := strings.ToLower(address)
+	// check if it has 0x prefix, normalize otherwise
+	if !strings.HasPrefix(hexAddress, "0x") {
+		hexAddress = "0x" + hexAddress
+	}
+
 	ethereumAddress := EthereumAddress{
 		correctlyCreated: true,
-		address:          address,
+		hex:              hexAddress,
 	}
 
 	if err := ethereumAddress.Validate(); err != nil {
@@ -40,18 +47,13 @@ func Unsafe_NewEthereumAddressFromString(address string) EthereumAddress {
 }
 
 func (e *EthereumAddress) Validate() error {
-	if e.address == "" {
+	if e.hex == "" {
 		return fmt.Errorf("address cannot be empty")
 	}
 
-	// A common error here is including 0x. We won't allow it.
-	if strings.HasPrefix(e.address, "0x") {
-		return fmt.Errorf("please, do not include 0x in the address: %s", e.address)
-	}
-
-	regexStr := "^[a-fA-F0-9]{40}$"
-	if !regexp.MustCompile(regexStr).MatchString(e.address) {
-		return fmt.Errorf("address does not match regex %s: %s", regexStr, e.address)
+	regexStr := "^0x[a-fA-F0-9]{40}$"
+	if !regexp.MustCompile(regexStr).MatchString(e.hex) {
+		return fmt.Errorf("address does not match regex %s: %s", regexStr, e.hex)
 	}
 
 	return nil
@@ -63,22 +65,33 @@ func (e *EthereumAddress) CheckCorrectlyCreated() {
 	}
 }
 
-// Address returns the address as a string
+// Address returns the address as a hex string, starting with 0x
 func (e *EthereumAddress) Address() string {
 	e.CheckCorrectlyCreated()
-	return e.address
+	return e.hex
+}
+
+// Bytes returns the address as a byte slice
+func (e *EthereumAddress) Bytes() []byte {
+	e.CheckCorrectlyCreated()
+	// decode the hex string to bytes (remove the 0x prefix first)
+	bytes, err := hex.DecodeString(e.hex[2:])
+	if err != nil {
+		panic(err)
+	}
+	return bytes
 }
 
 // implement JSON marshall and unmarshall as simple string
 
 // MarshalJSON implements the json.Marshaler interface
 func (e *EthereumAddress) MarshalJSON() ([]byte, error) {
-	return json.Marshal(e.address)
+	return json.Marshal(e.hex)
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface
 func (e *EthereumAddress) UnmarshalJSON(data []byte) error {
-	if err := json.Unmarshal(data, &e.address); err != nil {
+	if err := json.Unmarshal(data, &e.hex); err != nil {
 		return err
 	}
 
