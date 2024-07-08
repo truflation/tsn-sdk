@@ -8,14 +8,15 @@ import (
 	"github.com/kwilteam/kwil-db/parse"
 	"github.com/pkg/errors"
 	"github.com/truflation/tsn-sdk/internal/contracts"
+	"github.com/truflation/tsn-sdk/internal/types"
 	"github.com/truflation/tsn-sdk/internal/util"
 )
 
 type DeployStreamInput struct {
-	StreamId   util.StreamId `validate:"required"`
-	StreamType StreamType    `validate:"required"`
-	KwilClient client.Client `validate:"required"`
-	Deployer   []byte        `validate:"required"`
+	StreamId   util.StreamId    `validate:"required"`
+	StreamType types.StreamType `validate:"required"`
+	KwilClient client.Client    `validate:"required"`
+	Deployer   []byte           `validate:"required"`
 }
 
 type DeployStreamOutput struct {
@@ -58,9 +59,9 @@ func DeployStream(ctx context.Context, input DeployStreamInput) (*DeployStreamOu
 // GetContractContent returns the contract content based on the stream type
 func GetContractContent(input DeployStreamInput) ([]byte, error) {
 	switch input.StreamType {
-	case StreamTypeComposed:
+	case types.StreamTypeComposed:
 		return contracts.ComposedContractContent, nil
-	case StreamTypePrimitive:
+	case types.StreamTypePrimitive:
 		return contracts.PrivateContractContent, nil
 	default:
 		return nil, errors.New(fmt.Sprintf("unknown stream type: %v", input.StreamType))

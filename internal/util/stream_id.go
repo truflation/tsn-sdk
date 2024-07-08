@@ -48,6 +48,16 @@ func (s *StreamId) String() string {
 	return s.id
 }
 
+func (s *StreamId) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("\"%s\"", s.id)), nil
+}
+
+func (s *StreamId) UnmarshalJSON(b []byte) error {
+	// remove quotes
+	s.id = string(b[1 : len(b)-1])
+	return nil
+}
+
 type StreamIdSlice []StreamId
 
 func (s StreamIdSlice) Strings() []string {

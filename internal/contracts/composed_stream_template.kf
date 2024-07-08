@@ -91,6 +91,13 @@ procedure get_raw_record($date_from text, $date_to text, $frozen_at int) private
     value decimal(21,3),
     taxonomy_index int
 ) {
+    // checks are executed at the beginning of the procedure
+    if is_wallet_allowed_to_read(@caller) == false {
+        error('wallet not allowed to read');
+    }
+    // check if the stream is allowed to compose
+    is_stream_allowed_to_compose();
+
     // arrays are 1-indexed, so we match that
     $taxonomy_index int := 0;
     for $row2 in SELECT * FROM describe_taxonomies(true) {
@@ -113,6 +120,13 @@ procedure get_raw_index($date_from text, $date_to text, $frozen_at int) private 
     value decimal(21,3),
     taxonomy_index int
 ) {
+    // checks are executed at the beginning of the procedure
+    if is_wallet_allowed_to_read(@caller) == false {
+        error('wallet not allowed to read');
+    }
+    // check if the stream is allowed to compose
+    is_stream_allowed_to_compose();
+
     // arrays are 1-indexed, so we match that
     $taxonomy_index int := 0;
     for $row2 in SELECT * FROM describe_taxonomies(true) {
@@ -405,9 +419,6 @@ procedure get_record($date_from text, $date_to text, $frozen_at int) public view
     date_value text,
     value decimal(21,3)
 ) {
-    // check if the stream is allowed to compose
-    is_stream_allowed_to_compose();
-
     // here, we sum all of the records that were found by aggregating on the date_valie
     for $row in
         SELECT
@@ -428,9 +439,6 @@ procedure get_index($date_from text, $date_to text, $frozen_at int) public view 
     date_value text,
     value decimal(21,3)
 ) {
-    // check if the stream is allowed to compose
-    is_stream_allowed_to_compose();
-
     // here, we sum all of the index that were found by aggregating on the date_valie
     for $row in
         SELECT
@@ -831,6 +839,11 @@ procedure disable_taxonomy($version int) public {
 }
 
 procedure is_stream_allowed_to_compose() public view returns (value bool) {
+    // if @foreign_caller is empty, then it's a direct call
+    if @foreign_caller == '' {
+        return true;
+    }
+
     // if public, anyone can always read
     // If there's no visibility metadata, it's public.
     $visibility int := 0;

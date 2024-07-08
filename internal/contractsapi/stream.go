@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"github.com/kwilteam/kwil-db/core/types"
 	"github.com/kwilteam/kwil-db/core/types/client"
+	"github.com/kwilteam/kwil-db/core/types/transactions"
 	kwilUtils "github.com/kwilteam/kwil-db/core/utils"
+	tsntypes "github.com/truflation/tsn-sdk/internal/types"
 	"github.com/truflation/tsn-sdk/internal/util"
 	"strings"
 )
@@ -14,13 +16,17 @@ import (
 // ## Initializations
 
 type Stream struct {
-	StreamId  util.StreamId
-	_type     StreamType
-	_deployer []byte
-	_owner    []byte
-	DBID      string
-	_client   client.Client
+	StreamId     util.StreamId
+	_type        tsntypes.StreamType
+	_deployer    []byte
+	_owner       []byte
+	DBID         string
+	_client      client.Client
+	_initialized bool
+	_deployed    bool
 }
+
+var _ tsntypes.IStream = (*Stream)(nil)
 
 type NewStreamOptions struct {
 	Client   client.Client
@@ -61,24 +67,24 @@ func NewStream(options NewStreamOptions) (*Stream, error) {
 	}, nil
 }
 
-func (s *Stream) ToComposedStream(ctx context.Context) (*ComposedStream, error) {
-	return ComposedStreamFromStream(ctx, *s)
+func (s *Stream) ToComposedStream() (*ComposedStream, error) {
+	return ComposedStreamFromStream(*s)
 }
 
-func (s *Stream) ToPrimitiveStream(ctx context.Context) (*PrimitiveStream, error) {
-	return PrimitiveStreamFromStream(ctx, *s)
+func (s *Stream) ToPrimitiveStream() (*PrimitiveStream, error) {
+	return PrimitiveStreamFromStream(*s)
 }
 
-func (s Stream) GetSchema(ctx context.Context) (*types.Schema, error) {
+func (s *Stream) GetSchema(ctx context.Context) (*types.Schema, error) {
 	return s._client.GetSchema(ctx, s.DBID)
 }
 
-func (s Stream) GetType(ctx context.Context) (StreamType, error) {
+func (s *Stream) GetType(ctx context.Context) (tsntypes.StreamType, error) {
 	if s._type != "" {
 		return s._type, nil
 	}
 
-	values, err := s.getMetadata(ctx, GetMetadataParams{
+	values, err := s.getMetadata(ctx, getMetadataParams{
 		Key:        "type",
 		OnlyLatest: true,
 	})
@@ -94,22 +100,26 @@ func (s Stream) GetType(ctx context.Context) (StreamType, error) {
 
 	switch values[0].ValueS {
 	case "composed":
-		s._type = StreamTypeComposed
+		s._type = tsntypes.StreamTypeComposed
 	case "primitive":
-		s._type = StreamTypePrimitive
+		s._type = tsntypes.StreamTypePrimitive
 	default:
 		return "", fmt.Errorf("unknown stream type: %s", values[0].ValueS)
+	}
+
+	if s._type == "" {
+		return "", fmt.Errorf("stream type is not set")
 	}
 
 	return s._type, nil
 }
 
-func (s Stream) GetStreamOwner(ctx context.Context) ([]byte, error) {
+func (s *Stream) GetStreamOwner(ctx context.Context) ([]byte, error) {
 	if s._owner != nil {
 		return s._owner, nil
 	}
 
-	values, err := s.getMetadata(ctx, GetMetadataParams{
+	values, err := s.getMetadata(ctx, getMetadataParams{
 		Key:        "stream_owner",
 		OnlyLatest: true,
 	})
@@ -130,4 +140,61 @@ func (s Stream) GetStreamOwner(ctx context.Context) ([]byte, error) {
 	}
 
 	return s._owner, nil
+}
+
+func (s *Stream) checkInitialized(ctx context.Context) error {
+	if s._initialized {
+		return nil
+	}
+
+	// check if is deployed
+	err := s.checkDeployed(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	// check if is initialized by trying to get its type
+	_, err = s.GetType(ctx)
+	if err != nil {
+		return fmt.Errorf("check if the stream is initialized: %w", err)
+	}
+
+	s._initialized = true
+
+	return nil
+}
+
+func (s *Stream) checkDeployed(ctx context.Context) error {
+	if s._deployed {
+		return nil
+	}
+
+	_, err := s.GetSchema(ctx)
+	if err != nil {
+		return fmt.Errorf("check if the stream is deployed: %w", err)
+	}
+
+	s._deployed = true
+
+	return nil
+}
+
+func (s *Stream) call(ctx context.Context, method string, args []any) (*client.CallResult, error) {
+	return s._client.Call(ctx, s.DBID, method, args)
+}
+
+func (s *Stream) execute(ctx context.Context, method string, args [][]any) (transactions.TxHash, error) {
+	return s._client.Execute(ctx, s.DBID, method, args)
+}
+
+// except for init, all write methods should be checked for initialization
+// this prevents unknown errors when trying to execute a method on a stream that is not initialized
+func (s *Stream) checkedExecute(ctx context.Context, method string, args [][]any) (transactions.TxHash, error) {
+	err := s.checkInitialized(ctx)
+	if err != nil {
+		return transactions.TxHash{}, err
+	}
+
+	return s.execute(ctx, method, args)
 }

@@ -1,0 +1,163 @@
+package contractsapi
+
+import (
+	"context"
+	"github.com/cockroachdb/apd/v3"
+	"github.com/golang-sql/civil"
+	"github.com/kwilteam/kwil-db/core/types/transactions"
+	"github.com/pkg/errors"
+	"github.com/truflation/tsn-sdk/internal/types"
+	"reflect"
+	"time"
+)
+
+// ## View only procedures
+
+type getMetadataParams struct {
+	Key        types.MetadataKey
+	OnlyLatest bool
+	// optional. Gets metadata with ref value equal to the given value
+	Ref string
+}
+
+type getMetadataResult struct {
+	RowId  string `json:"row_id"`
+	ValueI int    `json:"value_i"`
+	ValueB bool   `json:"value_b"`
+	// TODO: uncomment when supported
+	// ValueF    float64 `json:"value_f"`
+	ValueS    string `json:"value_s"`
+	ValueRef  string `json:"value_ref"`
+	CreatedAt int    `json:"created_at"`
+}
+
+// GetValueByKey returns the value of the metadata by its key
+// I.e. if we expect an int from `ComposeVisibility`, we can call this function
+// to get `valueI` from the result
+func (g getMetadataResult) GetValueByKey(t types.MetadataKey) (any, error) {
+	metadataType := t.GetType()
+
+	switch metadataType {
+	case types.MetadataTypeInt:
+		return g.ValueI, nil
+	case types.MetadataTypeBool:
+		return g.ValueB, nil
+	case types.MetadataTypeString:
+		return g.ValueS, nil
+	case types.MetadataTypeRef:
+		return g.ValueRef, nil
+	default:
+		return types.MetadataValue{}, errors.New("unsupported metadata type")
+	}
+}
+
+// addArgOrNull adds a new argument to the list of arguments
+// this helps us making it NULL if it's equal to its zero value
+// The caveat is that we won't be able to pass the zero value of the type. Issues with this?
+func addArgOrNull(oldArgs []any, newArg any, nullIfZero bool) []any {
+	if nullIfZero && reflect.ValueOf(newArg).IsZero() {
+		return append(oldArgs, nil)
+	}
+
+	return append(oldArgs, newArg)
+}
+
+func (s *Stream) getMetadata(ctx context.Context, params getMetadataParams) ([]getMetadataResult, error) {
+
+	var args []any
+
+	args = addArgOrNull(args, params.Key.String(), false)
+	args = addArgOrNull(args, params.OnlyLatest, false)
+	// just add null if ref is empty, because it's optional
+	args = addArgOrNull(args, params.Ref, true)
+
+	res, err := s.call(ctx, "get_metadata", args)
+	if err != nil {
+		return nil, err
+	}
+
+	return DecodeCallResult[getMetadataResult](res)
+}
+
+// ## Write procedures
+
+type metadataInput struct {
+	Key   types.MetadataKey
+	Value types.MetadataValue
+}
+
+func (s *Stream) batchInsertMetadata(ctx context.Context, inputs []metadataInput) (transactions.TxHash, error) {
+	var tuples [][]any
+	for _, input := range inputs {
+		valType := input.Key.GetType()
+		valStr, err := valType.StringFromValue(input.Value)
+
+		if err != nil {
+			return nil, err
+		}
+
+		tuples = append(tuples, []any{input.Key.String(), valStr, string(valType)})
+	}
+
+	return s.checkedExecute(ctx, "insert_metadata", tuples)
+}
+
+func (s *Stream) insertMetadata(ctx context.Context, key types.MetadataKey, value types.MetadataValue) (transactions.TxHash, error) {
+	return s.batchInsertMetadata(ctx, []metadataInput{{key, value}})
+}
+
+func (s *Stream) disableMetadata(ctx context.Context, rowId string) (transactions.TxHash, error) {
+	return s.checkedExecute(ctx, "disable_metadata", [][]any{{rowId}})
+}
+
+func (s *Stream) InitializeStream(ctx context.Context) (transactions.TxHash, error) {
+	return s.execute(ctx, "init", nil)
+}
+
+type GetRecordRawOutput struct {
+	DateValue string `json:"date_value"`
+	Value     string `json:"value"`
+}
+
+// transformOrNil returns nil if the value is nil, otherwise it applies the transform function to the value.
+func transformOrNil[T any](value *T, transform func(T) any) any {
+	if value == nil {
+		return nil
+	}
+	return transform(*value)
+}
+
+func (s *Stream) GetRecords(ctx context.Context, input types.GetRecordsInput) ([]types.StreamRecord, error) {
+	var args []any
+	args = append(args, transformOrNil(input.DateFrom, func(date civil.Date) any { return date.String() }))
+	args = append(args, transformOrNil(input.DateTo, func(date civil.Date) any { return date.String() }))
+	args = append(args, transformOrNil(input.FrozenAt, func(date time.Time) any { return date.UTC().Format(time.RFC3339) }))
+
+	results, err := s.call(ctx, "get_record", args)
+	if err != nil {
+		return nil, err
+	}
+
+	rawOutputs, err := DecodeCallResult[GetRecordRawOutput](results)
+	if err != nil {
+		return nil, err
+	}
+
+	var outputs []types.StreamRecord
+	for _, rawOutput := range rawOutputs {
+		value, _, err := apd.NewFromString(rawOutput.Value)
+		if err != nil {
+			return nil, err
+		}
+		dateValue, err := civil.ParseDate(rawOutput.DateValue)
+		if err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, types.StreamRecord{
+			DateValue: dateValue,
+			Value:     *value,
+		})
+	}
+
+	return outputs, nil
+}

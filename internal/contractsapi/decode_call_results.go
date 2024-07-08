@@ -18,7 +18,7 @@ func DecodeCallResult[T any](result *client.CallResult) ([]T, error) {
 		return nil, fmt.Errorf("failed to marshal records: %v", err)
 	}
 
-	// Unmarshal JSON bytes into a slice of GetMetadataResult
+	// Unmarshal JSON bytes into a slice of getMetadataResult
 	var results []T
 	err = json.Unmarshal(recordsBytes, &results)
 	if err != nil {

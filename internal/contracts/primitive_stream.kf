@@ -516,6 +516,11 @@ procedure check_eth_address($address text) private {
 }
 
 procedure is_stream_allowed_to_compose() public view returns (value bool) {
+    // if @foreign_caller is empty, then it's a direct call
+    if @foreign_caller == '' {
+        return true;
+    }
+
     // if public, anyone can always read
     // If there's no visibility metadata, it's public.
     $visibility int := 0;
