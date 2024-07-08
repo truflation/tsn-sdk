@@ -25,6 +25,7 @@ func TestComposedStream(t *testing.T) {
 	assertNoErrorOrFail(t, err, "Failed to create signer address")
 
 	streamId := util.GenerateStreamId("test-composed-stream")
+	streamLocator := tsnClient.OwnStreamLocator(streamId)
 
 	childAStreamId := util.GenerateStreamId("test-composed-stream-child-a")
 	childBStreamId := util.GenerateStreamId("test-composed-stream-child-b")
@@ -40,14 +41,14 @@ func TestComposedStream(t *testing.T) {
 	})
 
 	t.Run("Basic Composed Stream", func(t *testing.T) {
-		// Deploy a primitive stream
+		// Deploy a composed stream
 		deployTxHash, err := tsnClient.DeployStream(ctx, streamId, types.StreamTypeComposed)
 		// expect ok
 		assertNoErrorOrFail(t, err, "Failed to deploy stream")
 		waitTxToBeMinedWithSuccess(t, ctx, tsnClient, deployTxHash)
 
 		// Load the deployed stream
-		deployedComposedStream, err := tsnClient.LoadComposedStream(streamId)
+		deployedComposedStream, err := tsnClient.LoadComposedStream(streamLocator)
 
 		// Initialize the stream
 		txHashInit, err := deployedComposedStream.InitializeStream(ctx)

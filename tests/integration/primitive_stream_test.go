@@ -22,6 +22,7 @@ func TestPrimitiveStream(t *testing.T) {
 	assertNoErrorOrFail(t, err, "Failed to create client")
 
 	streamId := util.GenerateStreamId("test-primitive-stream")
+	streamLocator := tsnClient.OwnStreamLocator(streamId)
 
 	t.Cleanup(func() {
 		destroyResult, err := tsnClient.DestroyStream(ctx, streamId)
@@ -37,7 +38,7 @@ func TestPrimitiveStream(t *testing.T) {
 		waitTxToBeMinedWithSuccess(t, ctx, tsnClient, deployTxHash)
 
 		// Load the deployed stream
-		deployedPrimitiveStream, err := tsnClient.LoadPrimitiveStream(streamId)
+		deployedPrimitiveStream, err := tsnClient.LoadPrimitiveStream(streamLocator)
 		// expect ok
 		assertNoErrorOrFail(t, err, "Failed to load stream")
 

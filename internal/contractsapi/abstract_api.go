@@ -3,6 +3,7 @@ package contractsapi
 import (
 	"context"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
+	"github.com/kwilteam/kwil-db/core/utils"
 	"github.com/pkg/errors"
 	"github.com/truflation/tsn-sdk/internal/types"
 	"github.com/truflation/tsn-sdk/internal/util"
@@ -16,12 +17,15 @@ func (s *Stream) DisableReadWallet(ctx context.Context, wallet util.EthereumAddr
 	return s.disableMetadataByRef(ctx, types.AllowReadWalletKey, wallet.Address())
 }
 
-func (s *Stream) AllowComposeStream(ctx context.Context, streamId util.StreamId) (transactions.TxHash, error) {
-	return s.insertMetadata(ctx, types.AllowComposeStreamKey, types.NewMetadataValue(streamId.String()))
+func (s *Stream) AllowComposeStream(ctx context.Context, locator types.StreamLocator) (transactions.TxHash, error) {
+	streamId := locator.StreamId
+	dbid := utils.GenerateDBID(streamId.String(), locator.DataProvider.Bytes())
+	return s.insertMetadata(ctx, types.AllowComposeStreamKey, types.NewMetadataValue(dbid))
 }
 
-func (s *Stream) DisableComposeStream(ctx context.Context, streamId util.StreamId) (transactions.TxHash, error) {
-	return s.disableMetadataByRef(ctx, types.AllowComposeStreamKey, streamId.String())
+func (s *Stream) DisableComposeStream(ctx context.Context, locator types.StreamLocator) (transactions.TxHash, error) {
+	dbid := utils.GenerateDBID(locator.StreamId.String(), locator.DataProvider.Bytes())
+	return s.disableMetadataByRef(ctx, types.AllowComposeStreamKey, dbid)
 }
 
 func (s *Stream) GetComposeVisibility(ctx context.Context) (*util.VisibilityEnum, error) {
@@ -113,7 +117,7 @@ func (s *Stream) GetAllowedReadWallets(ctx context.Context) ([]util.EthereumAddr
 	return wallets, nil
 }
 
-func (s *Stream) GetAllowedComposeStreams(ctx context.Context) ([]util.StreamId, error) {
+func (s *Stream) GetAllowedComposeStreams(ctx context.Context) ([]types.StreamLocator, error) {
 	results, err := s.getMetadata(ctx, getMetadataParams{
 		Key: types.AllowComposeStreamKey,
 	})
@@ -122,7 +126,7 @@ func (s *Stream) GetAllowedComposeStreams(ctx context.Context) ([]util.StreamId,
 		return nil, err
 	}
 
-	streams := make([]util.StreamId, len(results))
+	streams := make([]types.StreamLocator, len(results))
 
 	for i, result := range results {
 		value, err := result.GetValueByKey(types.AllowComposeStreamKey)
@@ -130,13 +134,33 @@ func (s *Stream) GetAllowedComposeStreams(ctx context.Context) ([]util.StreamId,
 			return nil, err
 		}
 
-		streamId, err := util.NewStreamId(value.(string))
+		// dbids are stored, not streamIds and data providers
+		// so we get this, then later we query the schema
+		dbid, ok := value.(string)
+		if !ok {
+			return nil, errors.New("invalid value type")
+		}
+
+		loc, err := s._client.GetSchema(ctx, dbid)
 
 		if err != nil {
 			return nil, err
 		}
 
-		streams[i] = *streamId
+		streamId, err := util.NewStreamId(dbid)
+		if err != nil {
+			return nil, err
+		}
+
+		owner, err := util.NewEthereumAddressFromString(loc.Owner.String())
+		if err != nil {
+			return nil, err
+		}
+
+		streams[i] = types.StreamLocator{
+			StreamId:     *streamId,
+			DataProvider: owner,
+		}
 	}
 
 	return streams, nil

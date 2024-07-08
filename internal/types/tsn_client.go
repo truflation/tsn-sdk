@@ -13,7 +13,12 @@ type Client interface {
 	KwilClient() *kwilClientPkg.Client
 	DeployStream(ctx context.Context, streamId util.StreamId, streamType StreamType) (transactions.TxHash, error)
 	DestroyStream(ctx context.Context, streamId util.StreamId) (transactions.TxHash, error)
-	LoadStream(streamId util.StreamId) (IStream, error)
-	LoadPrimitiveStream(streamId util.StreamId) (IPrimitiveStream, error)
-	LoadComposedStream(streamId util.StreamId) (IComposedStream, error)
+	LoadStream(stream StreamLocator) (IStream, error)
+	LoadPrimitiveStream(stream StreamLocator) (IPrimitiveStream, error)
+	LoadComposedStream(stream StreamLocator) (IComposedStream, error)
+	/*
+	 * utils for the client
+	 */
+	OwnStreamLocator(streamId util.StreamId) StreamLocator
+	Address() util.EthereumAddress
 }

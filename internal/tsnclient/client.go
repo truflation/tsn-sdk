@@ -99,26 +99,42 @@ func (c *Client) DestroyStream(ctx context.Context, streamId util.StreamId) (tra
 	return out.TxHash, nil
 }
 
-func (c *Client) LoadStream(streamId util.StreamId) (clientType.IStream, error) {
+func (c *Client) LoadStream(streamLocator clientType.StreamLocator) (clientType.IStream, error) {
 	return tsn_api.NewStream(tsn_api.NewStreamOptions{
 		Client:   c.kwilClient,
-		StreamId: streamId,
-		Deployer: c.kwilClient.Signer.Identity(),
+		StreamId: streamLocator.StreamId,
+		Deployer: streamLocator.DataProvider.Bytes(),
 	})
 }
 
-func (c *Client) LoadPrimitiveStream(streamId util.StreamId) (clientType.IPrimitiveStream, error) {
+func (c *Client) LoadPrimitiveStream(streamLocator clientType.StreamLocator) (clientType.IPrimitiveStream, error) {
 	return tsn_api.NewPrimitiveStream(tsn_api.NewStreamOptions{
 		Client:   c.kwilClient,
-		StreamId: streamId,
-		Deployer: c.kwilClient.Signer.Identity(),
+		StreamId: streamLocator.StreamId,
+		Deployer: streamLocator.DataProvider.Bytes(),
 	})
 }
 
-func (c *Client) LoadComposedStream(streamId util.StreamId) (clientType.IComposedStream, error) {
+func (c *Client) LoadComposedStream(streamLocator clientType.StreamLocator) (clientType.IComposedStream, error) {
 	return tsn_api.NewComposedStream(tsn_api.NewStreamOptions{
 		Client:   c.kwilClient,
-		StreamId: streamId,
-		Deployer: c.kwilClient.Signer.Identity(),
+		StreamId: streamLocator.StreamId,
+		Deployer: streamLocator.DataProvider.Bytes(),
 	})
+}
+
+func (c *Client) OwnStreamLocator(streamId util.StreamId) clientType.StreamLocator {
+	return clientType.StreamLocator{
+		StreamId:     streamId,
+		DataProvider: c.Address(),
+	}
+}
+
+func (c *Client) Address() util.EthereumAddress {
+	address, err := util.NewEthereumAddressFromBytes(c.kwilClient.Signer.Identity())
+	if err != nil {
+		// should never happen
+		panic(err)
+	}
+	return address
 }
