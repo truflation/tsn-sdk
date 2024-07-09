@@ -4,7 +4,7 @@ Understanding streams' lifecycle and associated transactions is crucial for effe
 
 ## Transaction Lifecycle
 
-TSN operations rely on blockchain transactions. Each transaction must be included in a block and mined to be considered valid and stored. This process introduces a delay between initiating an action and its completion.
+TSN operations rely on blockchain transactions. Each transaction must be included in a block and mined to be considered valid and stored, which introduces a delay between initiating an action and its completion.
 
 ### Key Points:
 
@@ -45,7 +45,7 @@ txHashInit, err := stream.InitializeStream(ctx)
 if err != nil {
     // Handle error
 }
-// Wait for transaction to be mined (similar to deployment)
+// Wait for the transaction to be mined (similar to deployment)
 ```
 
 ### 3. Configuration and Data Operations
