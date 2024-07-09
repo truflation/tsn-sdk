@@ -5,8 +5,8 @@ import (
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/kwilteam/kwil-db/core/utils"
 	"github.com/pkg/errors"
-	"github.com/truflation/tsn-sdk/internal/types"
-	"github.com/truflation/tsn-sdk/internal/util"
+	"github.com/truflation/tsn-sdk/core/types"
+	"github.com/truflation/tsn-sdk/core/util"
 )
 
 func (s *Stream) AllowReadWallet(ctx context.Context, wallet util.EthereumAddress) (transactions.TxHash, error) {

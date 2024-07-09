@@ -4,7 +4,7 @@ import (
 	"context"
 	kwilClientPkg "github.com/kwilteam/kwil-db/core/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
-	"github.com/truflation/tsn-sdk/internal/util"
+	"github.com/truflation/tsn-sdk/core/util"
 	"time"
 )
 
