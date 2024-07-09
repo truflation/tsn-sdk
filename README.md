@@ -85,11 +85,11 @@ Stream IDs are unique identifiers generated for each stream. They ensure consist
 
 ### Transaction Lifecycle
 
-TSN operations rely on blockchain transactions. Some actions require waiting for previous transactions to be mined before proceeding. For detailed information on transaction dependencies and best practices, see [Stream Lifecycle](https://www.notion.so/usherlabs/docs/stream-lifecycle.md).
+TSN operations rely on blockchain transactions. Some actions require waiting for previous transactions to be mined before proceeding. For detailed information on transaction dependencies and best practices, see [Stream Lifecycle](./docs/stream-lifecycle.md).
 
 ## Permissions and Privacy
 
-TSN supports granular control over stream access and visibility. Streams can be public or private, with read and write permissions configurable at the wallet level. Additionally, you can control whether other streams can compose data from your stream. For more details, refer to [Stream Permissions](https://www.notion.so/usherlabs/docs/stream-permissions.md).
+TSN supports granular control over stream access and visibility. Streams can be public or private, with read and write permissions configurable at the wallet level. Additionally, you can control whether other streams can compose data from your stream. For more details, refer to [Stream Permissions](./docs/stream-permissions.md).
 
 ## Caveats
 
@@ -97,9 +97,9 @@ TSN supports granular control over stream access and visibility. Streams can be 
 
 ## Further Reading
 
-- [Stream Lifecycle Documentation](https://www.notion.so/usherlabs/docs/stream-lifecycle.md)
-- [Stream Permissions Guide](https://www.notion.so/usherlabs/docs/stream-permissions.md)
-- [API Reference](https://www.notion.so/usherlabs/docs/api-reference.md)
+- [Stream Lifecycle Documentation](./docs/stream-lifecycle.md)
+- [Stream Permissions Guide](./docs/stream-permissions.md)
+- [API Reference](./docs/api-reference.md)
 - [Truflation Whitepaper](https://truflation.com/whitepaper)
 
 For additional support or questions, please [open an issue](https://github.com/truflation/tsn-sdk/issues) or contact our support team.
