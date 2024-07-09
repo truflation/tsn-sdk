@@ -2,7 +2,7 @@
 
 The TSN SDK provides developers with tools to interact with the Truflation Stream Network, a decentralized platform for publishing, composing, and consuming economic data streams.
 
-⚠ **These documentation files are a work in progress. They probably contain errors, and inconsistencies. If you find some, don't hesitate to open an issue at the [GitHub repository](https://github.com/truflation/tsn-sdk).**
+⚠ **These documentation files are a work in progress. They probably contain errors and inconsistencies. If you find some, don't hesitate to open an issue at the [GitHub repository](https://github.com/truflation/tsn-sdk).**
 
 ## Quick Start
 
@@ -69,7 +69,7 @@ func main() {
 
 - **Data Providers**: Publish and maintain data streams, taxonomies, and push primitives.
 - **Consumers**: Access and utilize stream data. Examples include researchers, analysts, financial institutions, and DApp developers.
-- **Node Operators**: Maintain network infrastructure and consensus. Note: The network is currently in a centralized phase during development. Decentralization is planned for future releases. Node operation is not handled by this repository.
+- **Node Operators**: Maintain network infrastructure and consensus. Note: The network is currently in a centralized phase during development. Decentralization is planned for future releases. This repository does not handle node operation.
 
 ## Key Concepts
 
@@ -89,11 +89,11 @@ TSN operations rely on blockchain transactions. Some actions require waiting for
 
 ## Permissions and Privacy
 
-TSN supports granular control over stream access and visibility. Streams can be public or private, with read and write permissions configurable at the wallet level. Additionally, you can control whether other streams are allowed to compose data from your stream. For more details, refer to [Stream Permissions](https://www.notion.so/usherlabs/docs/stream-permissions.md).
+TSN supports granular control over stream access and visibility. Streams can be public or private, with read and write permissions configurable at the wallet level. Additionally, you can control whether other streams can compose data from your stream. For more details, refer to [Stream Permissions](https://www.notion.so/usherlabs/docs/stream-permissions.md).
 
 ## Caveats
 
-- **Transaction Confirmation**: Always wait for transaction confirmation before performing dependent actions. See the [Transaction Lifecycle](https://www.notion.so/Docs-561559c0d2344c3f92b14375f5b7eefe?pvs=21) section for more information.
+- **Transaction Confirmation**: Always wait for transaction confirmation before performing dependent actions. For more information, see the [Transaction Lifecycle](https://www.notion.so/Docs-561559c0d2344c3f92b14375f5b7eefe?pvs=21) section.
 
 ## Further Reading
 
