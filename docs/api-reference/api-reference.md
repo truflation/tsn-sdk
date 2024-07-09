@@ -17,87 +17,91 @@ Below is an example demonstrating how to use the TSN SDK to deploy, initialize, 
 package main
 
 import (
-    "context"
-    "fmt"
-    "github.com/truflation/tsn-sdk/core/client"
-    "github.com/truflation/tsn-sdk/core/types"
+	"context"
+	"fmt"
+	"github.com/golang-sql/civil"
+	"github.com/truflation/tsn-sdk/core/tsnclient"
+	"github.com/truflation/tsn-sdk/core/types"
+	"github.com/truflation/tsn-sdk/core/util"
+	"time"
 )
 
 func main() {
-    ctx := context.Background()
+	ctx := context.Background()
 
-    // Create TSN client
-    tsnClient, err := client.NewClient(ctx, "<https://tsn-provider-url.com>")
-    if err != nil {
-        panic(err)
-    }
+	// Create TSN client
+	tsnClient, err := tsnclient.NewClient(ctx, "<https://tsn-provider-url.com>", tsnclient.WithSigner(signer))
+	if err != nil {
+		panic(err)
+	}
 
-    // Generate a stream ID
-    streamId := util.GenerateStreamId("example-stream")
+	// Generate a stream ID
+	streamId := util.GenerateStreamId("example-stream")
 
-    // Deploy a new primitive stream
-    deployTxHash, err := tsnClient.DeployStream(ctx, streamId, types.StreamTypePrimitive)
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println("Deploy transaction hash:", deployTxHash)
+	// Deploy a new primitive stream
+	deployTxHash, err := tsnClient.DeployStream(ctx, streamId, types.StreamTypePrimitive)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Deploy transaction hash:", deployTxHash)
 
-    // Wait for the transaction to be mined
-    txRes, err := tsnClient.WaitForTx(ctx, deployTxHash, time.Second)
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println("Deploy transaction result:", txRes)
+	// Wait for the transaction to be mined
+	txRes, err := tsnClient.WaitForTx(ctx, deployTxHash, time.Second)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Deploy transaction result:", txRes)
 
-    // Load the deployed stream
-    stream, err := tsnClient.LoadPrimitiveStream(tsnClient.OwnStreamLocator(streamId))
-    if err != nil {
-        panic(err)
-    }
+	// Load the deployed stream
+	stream, err := tsnClient.LoadPrimitiveStream(tsnClient.OwnStreamLocator(streamId))
+	if err != nil {
+		panic(err)
+	}
 
-    // Initialize the stream
-    txHashInit, err := stream.InitializeStream(ctx)
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println("Initialize transaction hash:", txHashInit)
+	// Initialize the stream
+	txHashInit, err := stream.InitializeStream(ctx)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Initialize transaction hash:", txHashInit)
 
-    // Wait for the initialization transaction to be mined
-    txResInit, err := tsnClient.WaitForTx(ctx, txHashInit, time.Second)
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println("Initialize transaction result:", txResInit)
+	// Wait for the initialization transaction to be mined
+	txResInit, err := tsnClient.WaitForTx(ctx, txHashInit, time.Second)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Initialize transaction result:", txResInit)
 
-    // Insert records into the stream
-    txHashInsert, err := stream.InsertRecords(ctx, []types.InsertRecordInput{
-        {
-            Value:     1,
-            DateValue: civil.Date{Year: 2023, Month: 1, Day: 1},
-        },
-    })
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println("Insert transaction hash:", txHashInsert)
+	// Insert records into the stream
+	txHashInsert, err := stream.InsertRecords(ctx, []types.InsertRecordInput{
+		{
+			Value:     1,
+			DateValue: civil.Date{Year: 2023, Month: 1, Day: 1},
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Insert transaction hash:", txHashInsert)
 
-    // Wait for the insert transaction to be mined
-    txResInsert, err := tsnClient.WaitForTx(ctx, txHashInsert, time.Second)
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println("Insert transaction result:", txResInsert)
+	// Wait for the insert transaction to be mined
+	txResInsert, err := tsnClient.WaitForTx(ctx, txHashInsert, time.Second)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Insert transaction result:", txResInsert)
 
-    // Read records from the stream
-    records, err := stream.GetRecords(ctx, types.GetRecordsInput{
-        DateFrom: civil.Date{Year: 2023, Month: 1, Day: 1},
-        DateTo:   civil.Date{Year: 2023, Month: 12, Day: 31},
-    })
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println("Records:", records)
+	// Read records from the stream
+	records, err := stream.GetRecords(ctx, types.GetRecordsInput{
+		DateFrom: civil.Date{Year: 2023, Month: 1, Day: 1},
+		DateTo:   civil.Date{Year: 2023, Month: 12, Day: 31},
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Records:", records)
 }
+
 ```
 
 Please refer to the test files in the SDK repository for more examples and detailed usage patterns. These tests provide comprehensive examples of various stream operations and error-handling scenarios.
