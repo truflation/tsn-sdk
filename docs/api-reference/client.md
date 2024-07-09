@@ -90,7 +90,7 @@ Loads an existing composed stream.
 OwnStreamLocator(streamId util.StreamId) StreamLocator
 ```
 
-Generates a stream locator for the given stream ID.
+Generates a stream locator for the given stream ID, using the current signer as the owner of the stream.
 
 **Parameters:**
 - `streamId`: The unique identifier for the stream.
