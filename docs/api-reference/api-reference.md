@@ -1,13 +1,13 @@
 # API Reference
 
-The Truflation Stream Network (TSN) SDK offers a comprehensive set of APIs for interacting with the TSN, allowing developers to create, manage, and consume data streams. This document provides detailed descriptions of all available methods in the SDK, along with example usages.
+The Truflation Stream Network (TSN) SDK offers a comprehensive set of APIs for interacting with the TSN, allowing developers to create, manage, and consume data streams. This document provides detailed descriptions of all available methods in the SDK, along with examples of their usage.
 
 ## Interfaces
 - [Client](client.md)
 - [Primitive Stream](primitive-stream.md)
 - [Composed Stream](composed-stream.md)
 
-Other utilities can be found in the [util](util.md) documentation.
+Other utilities are in the [util](util.md) documentation.
 
 ## Example Usage
 
@@ -100,4 +100,4 @@ func main() {
 }
 ```
 
-For more examples and detailed usage patterns, please refer to the test files in the SDK repository. These tests provide comprehensive examples of various stream operations and error-handling scenarios.
+Please refer to the test files in the SDK repository for more examples and detailed usage patterns. These tests provide comprehensive examples of various stream operations and error-handling scenarios.
