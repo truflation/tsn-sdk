@@ -4,6 +4,9 @@ The TSN SDK provides developers with tools to interact with the Truflation Strea
 
 ⚠ **These documentation files are a work in progress. They probably contain errors and inconsistencies. If you find some, don't hesitate to open an issue at the [GitHub repository](https://github.com/truflation/tsn-sdk).**
 
+![Cover](./docs/assets/cover.png)
+
+
 ## Quick Start
 
 ### Prerequisites
