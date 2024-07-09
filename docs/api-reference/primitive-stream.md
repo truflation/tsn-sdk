@@ -1,6 +1,6 @@
-# Primitive Stream Interface
+# Stream Interface
 
-The `IPrimitiveStream` interface provides methods for interacting with primitive streams.
+The `IPrimitiveStream` interface extends `IStream` and provides additional methods for interacting with primitive streams.
 
 ## Methods
 
