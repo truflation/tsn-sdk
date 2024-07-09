@@ -26,11 +26,11 @@ Composed streams aggregate and process data from multiple streams, allowing for 
 
 - Derive data from multiple primitive or other composed streams
 - Can implement custom logic for data processing
-- Enable creation of sophisticated financial products and indicators
+- Enable the creation of sophisticated financial products and indicators
 
 ### Default Behavior:
 
-By default, the composed stream contract implements a weighting mechanism for child streams. This allows for a straightforward data composition based on weighted averages of the child streams' values.
+The composed stream contract implements a weighting mechanism for child streams by default. This allows for a straightforward data composition based on weighted averages of the child streams' values.
 
 ### Examples:
 
@@ -57,7 +57,7 @@ Users can fetch official (system) and unofficial streams through the system cont
 When a stream is accepted as a system stream:
 
 - The original data provider can still push primitives to the stream.
-- The data provider loses the ability to drop the stream or modify its taxonomy.
+- The data provider cannot drop the stream or modify its taxonomy.
 - Ownership of the stream is transferred to the TSN governance.
 - Any future changes to the stream are decided by the community through governance processes.
 
@@ -69,7 +69,7 @@ When a stream is accepted as a system stream:
 
 ## Stream Customization and Composability
 
-While TSN provides suggested contract templates for each stream type, users have the flexibility to alter contract logic as long as the procedure interfaces are maintained. This approach ensures:
+While TSN provides suggested contract templates for each stream type, users can alter contract logic as long as the procedure interfaces are maintained. This approach ensures:
 
 1. **Flexibility**: Users can implement custom logic tailored to their specific use cases.
 2. **Composability**: Streams remain interoperable within the TSN ecosystem by maintaining consistent interfaces.
