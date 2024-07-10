@@ -112,3 +112,7 @@ TSN supports granular control over stream access and visibility. Streams can be 
 - [Truflation Whitepaper](https://whitepaper.truflation.com/)
 
 For additional support or questions, please [open an issue](https://github.com/truflation/tsn-sdk/issues) or contact our support team.
+
+## License
+
+The tsn-db repository is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for more details.
