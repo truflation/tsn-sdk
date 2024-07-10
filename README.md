@@ -74,7 +74,7 @@ For more comprehensive examples and usage patterns, please refer to the test fil
 - **Composed Streams**: Aggregate and process data from multiple streams.
 - **System Streams**: Contract-managed streams audited and accepted by TSN governance to ensure quality. 
 
-See [type of streams guide](./docs/type-of-streams.md) for more information.
+See [type of streams](./docs/type-of-streams.md) and [default TSN contracts](./docs/contracts.md) guides for more information.
 
 ## Roles and Responsibilities
 
