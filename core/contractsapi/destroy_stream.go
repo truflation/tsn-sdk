@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
-	"github.com/truflation/tsn-sdk/internal/util"
+	"github.com/truflation/tsn-sdk/core/util"
 )
 import "github.com/go-playground/validator/v10"
 

@@ -8,9 +8,9 @@ import (
 	"github.com/kwilteam/kwil-db/core/log"
 	kwilClientType "github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
-	tsn_api "github.com/truflation/tsn-sdk/internal/contractsapi"
-	clientType "github.com/truflation/tsn-sdk/internal/types"
-	"github.com/truflation/tsn-sdk/internal/util"
+	tsn_api "github.com/truflation/tsn-sdk/core/contractsapi"
+	clientType "github.com/truflation/tsn-sdk/core/types"
+	"github.com/truflation/tsn-sdk/core/util"
 	"time"
 )
 

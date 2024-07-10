@@ -8,8 +8,8 @@ import (
 	"github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	kwilUtils "github.com/kwilteam/kwil-db/core/utils"
-	tsntypes "github.com/truflation/tsn-sdk/internal/types"
-	"github.com/truflation/tsn-sdk/internal/util"
+	tsntypes "github.com/truflation/tsn-sdk/core/types"
+	"github.com/truflation/tsn-sdk/core/util"
 	"strings"
 )
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
-	"github.com/truflation/tsn-sdk/internal/types"
+	"github.com/truflation/tsn-sdk/core/types"
 	"strconv"
 )
 

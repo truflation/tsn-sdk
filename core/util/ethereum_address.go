@@ -10,8 +10,7 @@ import (
 
 type EthereumAddress struct {
 	correctlyCreated bool
-	//
-	hex string
+	hex              string
 }
 
 func NewEthereumAddressFromString(address string) (EthereumAddress, error) {
@@ -26,7 +25,7 @@ func NewEthereumAddressFromString(address string) (EthereumAddress, error) {
 		hex:              hexAddress,
 	}
 
-	if err := ethereumAddress.Validate(); err != nil {
+	if err := ethereumAddress.validate(); err != nil {
 		return EthereumAddress{}, err
 	}
 
@@ -46,7 +45,7 @@ func Unsafe_NewEthereumAddressFromString(address string) EthereumAddress {
 	return e
 }
 
-func (e *EthereumAddress) Validate() error {
+func (e *EthereumAddress) validate() error {
 	if e.hex == "" {
 		return fmt.Errorf("address cannot be empty")
 	}
@@ -59,7 +58,7 @@ func (e *EthereumAddress) Validate() error {
 	return nil
 }
 
-func (e *EthereumAddress) CheckCorrectlyCreated() {
+func (e *EthereumAddress) checkCorrectlyCreated() {
 	if !e.correctlyCreated {
 		panic("please create an EthereumAddress with NewEthereumAddress")
 	}
@@ -67,13 +66,13 @@ func (e *EthereumAddress) CheckCorrectlyCreated() {
 
 // Address returns the address as a hex string, starting with 0x
 func (e *EthereumAddress) Address() string {
-	e.CheckCorrectlyCreated()
+	e.checkCorrectlyCreated()
 	return e.hex
 }
 
 // Bytes returns the address as a byte slice
 func (e *EthereumAddress) Bytes() []byte {
-	e.CheckCorrectlyCreated()
+	e.checkCorrectlyCreated()
 	// decode the hex string to bytes (remove the 0x prefix first)
 	bytes, err := hex.DecodeString(e.hex[2:])
 	if err != nil {
@@ -96,7 +95,7 @@ func (e *EthereumAddress) UnmarshalJSON(data []byte) error {
 	}
 
 	// verify when decoding
-	if err := e.Validate(); err != nil {
+	if err := e.validate(); err != nil {
 		return err
 	}
 

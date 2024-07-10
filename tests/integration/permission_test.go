@@ -7,9 +7,9 @@ import (
 	"github.com/kwilteam/kwil-db/core/crypto"
 	"github.com/kwilteam/kwil-db/core/crypto/auth"
 	"github.com/stretchr/testify/assert"
-	"github.com/truflation/tsn-sdk/internal/tsnclient"
-	"github.com/truflation/tsn-sdk/internal/types"
-	"github.com/truflation/tsn-sdk/internal/util"
+	"github.com/truflation/tsn-sdk/core/tsnclient"
+	"github.com/truflation/tsn-sdk/core/types"
+	"github.com/truflation/tsn-sdk/core/util"
 	"testing"
 )
 
