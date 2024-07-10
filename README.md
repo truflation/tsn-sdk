@@ -26,6 +26,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/golang-sql/civil"
+	"github.com/kwilteam/kwil-db/core/crypto"
+	"github.com/kwilteam/kwil-db/core/crypto/auth"
 	"github.com/truflation/tsn-sdk/core/tsnclient"
 	"github.com/truflation/tsn-sdk/core/types"
 	"github.com/truflation/tsn-sdk/core/util"
@@ -35,7 +37,9 @@ func main() {
 	ctx := context.Background()
 
 	// Create TSN client
-	tsnClient, err := tsnclient.NewClient(ctx, "<https://tsn-provider-url.com>")
+	pk, _ := crypto.Secp256k1PrivateKeyFromHex("<your-private-key-hex>")
+	signer := &auth.EthPersonalSigner{Key: *pk}
+	tsnClient, err := tsnclient.NewClient(ctx, "<https://tsn-provider-url.com>", tsnclient.WithSigner(signer))
 	if err != nil {
 		panic(err)
 	}
