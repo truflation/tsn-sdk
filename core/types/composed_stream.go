@@ -11,6 +11,7 @@ type TaxonomyItem struct {
 }
 
 type DescribeTaxonomiesParams struct {
+	// LatestVersion if true, will return the latest version of the taxonomy only
 	LatestVersion bool
 }
 
