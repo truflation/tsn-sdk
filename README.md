@@ -108,7 +108,7 @@ TSN supports granular control over stream access and visibility. Streams can be 
 
 ## Further Reading
 
-- [TSN Documentation](./docs/readme.md)
+- [TSN-SDK Documentation](./docs/readme.md)
 - [Truflation Whitepaper](https://whitepaper.truflation.com/)
 
 For additional support or questions, please [open an issue](https://github.com/truflation/tsn-sdk/issues) or contact our support team.
