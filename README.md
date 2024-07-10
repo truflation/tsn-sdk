@@ -115,4 +115,4 @@ For additional support or questions, please [open an issue](https://github.com/t
 
 ## License
 
-The tsn-db repository is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for more details.
+The TSN-SDK repository is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for more details.
