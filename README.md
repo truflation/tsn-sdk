@@ -26,6 +26,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/golang-sql/civil"
+	"github.com/kwilteam/kwil-db/core/crypto"
+	"github.com/kwilteam/kwil-db/core/crypto/auth"
 	"github.com/truflation/tsn-sdk/core/tsnclient"
 	"github.com/truflation/tsn-sdk/core/types"
 	"github.com/truflation/tsn-sdk/core/util"
@@ -35,13 +37,16 @@ func main() {
 	ctx := context.Background()
 
 	// Create TSN client
-	tsnClient, err := tsnclient.NewClient(ctx, "<https://tsn-provider-url.com>")
+	pk, _ := crypto.Secp256k1PrivateKeyFromHex("<your-private-key-hex>")
+	signer := &auth.EthPersonalSigner{Key: *pk}
+	tsnClient, err := tsnclient.NewClient(ctx, "<https://tsn-provider-url.com>", tsnclient.WithSigner(signer))
 	if err != nil {
 		panic(err)
 	}
 
 	// Load an existing stream
 	streamId := util.GenerateStreamId("your-stream-id")
+	// if we intend to use streams from another provider, we create locators using the provider's address
 	streamLocator := tsnClient.OwnStreamLocator(streamId)
 	stream, err := tsnClient.LoadPrimitiveStream(streamLocator)
 	if err != nil {
@@ -59,14 +64,17 @@ func main() {
 
 	fmt.Println(records)
 }
-
 ```
+
+For more comprehensive examples and usage patterns, please refer to the test files in the SDK repository. These tests provide detailed examples of various stream operations and error-handling scenarios.
 
 ## Types of Streams
 
 - **Primitive Streams**: Direct data sources from providers. Examples include indexes from known sources, aggregation output such as sentiment analysis, and off-chain/on-chain data.
 - **Composed Streams**: Aggregate and process data from multiple streams.
-- **System Streams**: Contract-managed streams audited and accepted by TSN governance to ensure quality. See [type of streams guide](./docs/type-of-streams.md) for more information.
+- **System Streams**: Contract-managed streams audited and accepted by TSN governance to ensure quality. 
+
+See [type of streams guide](./docs/type-of-streams.md) for more information.
 
 ## Roles and Responsibilities
 
@@ -78,7 +86,7 @@ func main() {
 
 ### Stream ID Composition
 
-Stream IDs are unique identifiers generated for each stream. They ensure consistent referencing across the network.
+Stream IDs are unique identifiers generated for each stream. They ensure consistent referencing across the network. It's used as the contract name. A contract identifier is a hash over the deployer address (data provider) and the stream ID.
 
 ### Types of Data Points
 
@@ -96,18 +104,11 @@ TSN supports granular control over stream access and visibility. Streams can be 
 
 ## Caveats
 
-- **Transaction Confirmation**: Always wait for transaction confirmation before performing dependent actions. For more information, see the [Transaction Lifecycle](https://www.notion.so/Docs-561559c0d2344c3f92b14375f5b7eefe?pvs=21) section.
+- **Transaction Confirmation**: Always wait for transaction confirmation before performing dependent actions. For more information, see the [Stream Lifecycle](./docs/stream-lifecycle.md) section.
 
 ## Further Reading
 
-- [Stream Lifecycle Documentation](./docs/stream-lifecycle.md)
-- [Stream Permissions Guide](./docs/stream-permissions.md)
-- [API Reference](./docs/api-reference.md)
-- [Truflation Whitepaper](https://truflation.com/whitepaper)
+- [TSN Documentation](./docs/readme.md)
+- [Truflation Whitepaper](https://whitepaper.truflation.com/)
 
 For additional support or questions, please [open an issue](https://github.com/truflation/tsn-sdk/issues) or contact our support team.
-
-[//]: # (TODO:)
-[//]: # (- add "see tests for more examples" on the example usage)
-[//]: # (- mention it uses kwil in the README)
-[//]: # (- date input is wrong: we use civil date instead of string)

@@ -13,17 +13,20 @@ import (
 	"testing"
 )
 
+// TestPermissions demonstrates the deployment and permission management of primitive and composed streams in TSN.
 func TestPermissions(t *testing.T) {
 	ctx := context.Background()
 
-	// owner assets
+	// Set up owner assets
+	// The owner is the entity deploying and managing the streams
 	ownerPk, err := crypto.Secp256k1PrivateKeyFromHex(TestPrivateKey)
 	assertNoErrorOrFail(t, err, "Failed to parse private key")
 	streamOwnerSigner := &auth.EthPersonalSigner{Key: *ownerPk}
 	ownerTsnClient, err := tsnclient.NewClient(ctx, TestKwilProvider, tsnclient.WithSigner(streamOwnerSigner))
 	assertNoErrorOrFail(t, err, "Failed to create client")
 
-	// reader assets
+	// Set up reader assets
+	// The reader represents a separate entity that will attempt to access the streams
 	readerPk, err := crypto.Secp256k1PrivateKeyFromHex("1111111111111111111111111111111111111111111111111111111111111111")
 	assertNoErrorOrFail(t, err, "Failed to parse private key")
 	readerSigner := &auth.EthPersonalSigner{Key: *readerPk}
@@ -32,20 +35,21 @@ func TestPermissions(t *testing.T) {
 	readerTsnClient, err := tsnclient.NewClient(ctx, TestKwilProvider, tsnclient.WithSigner(readerSigner))
 	assertNoErrorOrFail(t, err, "Failed to create client")
 
+	// Generate unique stream IDs for primitive and composed streams
 	primitiveStreamId := util.GenerateStreamId("test-wallet-permission-primitive-stream")
 	composedStreamId := util.GenerateStreamId("test-wallet-permission-composed-stream")
 
 	primitiveStreamLocator := ownerTsnClient.OwnStreamLocator(primitiveStreamId)
 	composedStreamLocator := ownerTsnClient.OwnStreamLocator(composedStreamId)
 
-	// destroy the stream at the end
+	// Set up cleanup to destroy the primitive stream after test completion
 	t.Cleanup(func() {
 		destroyResult, err := ownerTsnClient.DestroyStream(ctx, primitiveStreamId)
 		assertNoErrorOrFail(t, err, "Failed to destroy stream")
 		waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, destroyResult)
 	})
 
-	// Deploy a primitive stream
+	// Deploy a primitive stream with initial data
 	deployTestPrimitiveStreamWithData(t, ctx, ownerTsnClient, primitiveStreamId, []types.InsertRecordInput{
 		{
 			Value:     1,
@@ -53,25 +57,26 @@ func TestPermissions(t *testing.T) {
 		},
 	})
 
-	// checkRecords is a helper for asserting the records
+	// Helper function to check if retrieved records match expected values
 	var checkRecords = func(t *testing.T, rec []types.StreamRecord) {
 		assert.Equal(t, 1, len(rec))
 		assert.Equal(t, "1.000", rec[0].Value.String())
 		assert.Equal(t, civil.Date{Year: 2020, Month: 1, Day: 1}, rec[0].DateValue)
 	}
 
-	// load primitive stream
+	// Load the primitive stream for both owner and reader
 	ownerPrimitiveStream, err := ownerTsnClient.LoadPrimitiveStream(primitiveStreamLocator)
 	assertNoErrorOrFail(t, err, "Failed to load stream")
 	readerPrimitiveStream, err := readerTsnClient.LoadPrimitiveStream(primitiveStreamLocator)
 	assertNoErrorOrFail(t, err, "Failed to load stream")
 
-	// will be used to read the stream
+	// Define input for reading records
 	readInput := types.GetRecordsInput{
 		DateFrom: &civil.Date{Year: 2020, Month: 1, Day: 1},
 		DateTo:   &civil.Date{Year: 2020, Month: 1, Day: 1},
 	}
 
+	// Test primitive stream wallet read permissions
 	t.Run("TestPrimitiveStreamWalletReadPermission", func(t *testing.T) {
 		t.Cleanup(func() {
 			// make these changes not interfere with the next test
@@ -117,15 +122,16 @@ func TestPermissions(t *testing.T) {
 		checkRecords(t, rec)
 	})
 
+	// Test composed stream functionality and permissions
 	t.Run("TestComposedStream", func(t *testing.T) {
+		// Set up cleanup to destroy the composed stream after test completion
 		t.Cleanup(func() {
 			destroyResult, err := ownerTsnClient.DestroyStream(ctx, composedStreamId)
 			assert.NoError(t, err, "Failed to destroy stream")
 			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, destroyResult)
 		})
 
-		// preparing the composed stream
-		// Deploy a composed stream
+		// Deploy a composed stream using the primitive stream as a child
 		deployTestComposedStreamWithTaxonomy(t, ctx, ownerTsnClient, composedStreamId, []types.TaxonomyItem{
 			{
 				ChildStream: primitiveStreamLocator,
@@ -133,12 +139,13 @@ func TestPermissions(t *testing.T) {
 			},
 		})
 
-		// load composed stream
+		// Load the composed stream for both owner and reader
 		ownerComposedStream, err := ownerTsnClient.LoadComposedStream(ownerTsnClient.OwnStreamLocator(composedStreamId))
 		assertNoErrorOrFail(t, err, "Failed to load stream")
 		readerComposedStream, err := readerTsnClient.LoadComposedStream(ownerTsnClient.OwnStreamLocator(composedStreamId))
 		assertNoErrorOrFail(t, err, "Failed to load stream")
 
+		// Test wallet read permissions for the composed stream
 		t.Run("WalletReadPermission", func(t *testing.T) {
 			t.Cleanup(func() {
 				// make these changes not interfere with the next test
@@ -214,6 +221,7 @@ func TestPermissions(t *testing.T) {
 			checkRecords(t, rec)
 		})
 
+		// Test stream composition permissions
 		t.Run("StreamComposePermission", func(t *testing.T) {
 			t.Cleanup(func() {
 				// make these changes not interfere with the next test
