@@ -23,38 +23,41 @@ go get github.com/truflation/tsn-sdk
 package main
 
 import (
-    "context"
-    "fmt"
-    "github.com/truflation/tsn-sdk/core/client"
-    "github.com/truflation/tsn-sdk/core/types"
+	"context"
+	"fmt"
+	"github.com/golang-sql/civil"
+	"github.com/truflation/tsn-sdk/core/tsnclient"
+	"github.com/truflation/tsn-sdk/core/types"
+	"github.com/truflation/tsn-sdk/core/util"
 )
 
 func main() {
-    ctx := context.Background()
+	ctx := context.Background()
 
-    // Create TSN client
-    tsnClient, err := client.NewClient(ctx, "<https://tsn-provider-url.com>")
-    if err != nil {
-        panic(err)
-    }
+	// Create TSN client
+	tsnClient, err := tsnclient.NewClient(ctx, "<https://tsn-provider-url.com>")
+	if err != nil {
+		panic(err)
+	}
 
-    // Load an existing stream
-    streamId := "your-stream-id"
-    stream, err := tsnClient.LoadPrimitiveStream(streamId)
-    if err != nil {
-        panic(err)
-    }
+	// Load an existing stream
+	streamId := util.GenerateStreamId("your-stream-id")
+	streamLocator := tsnClient.OwnStreamLocator(streamId)
+	stream, err := tsnClient.LoadPrimitiveStream(streamLocator)
+	if err != nil {
+		panic(err)
+	}
 
-    // Read data from the stream
-    records, err := stream.GetRecords(ctx, types.GetRecordsInput{
-        DateFrom: "2023-01-01",
-        DateTo:   "2023-12-31",
-    })
-    if err != nil {
-        panic(err)
-    }
+	// Read data from the stream
+	records, err := stream.GetRecords(ctx, types.GetRecordsInput{
+		DateFrom: civil.ParseDate("2023-01-01"),
+		DateTo:   civil.ParseDate("2023-01-31"),
+	})
+	if err != nil {
+		panic(err)
+	}
 
-    fmt.Println(records)
+	fmt.Println(records)
 }
 
 ```
@@ -63,7 +66,7 @@ func main() {
 
 - **Primitive Streams**: Direct data sources from providers. Examples include indexes from known sources, aggregation output such as sentiment analysis, and off-chain/on-chain data.
 - **Composed Streams**: Aggregate and process data from multiple streams.
-- **System Streams**: Contract-managed streams audited and accepted by TSN governance to ensure quality. See `SYSTEM_STREAMS.md` for more information.
+- **System Streams**: Contract-managed streams audited and accepted by TSN governance to ensure quality. See [type of streams guide](./docs/type-of-streams.md) for more information.
 
 ## Roles and Responsibilities
 

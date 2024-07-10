@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/golang-sql/civil"
+	"github.com/kwilteam/kwil-db/core/crypto"
+	"github.com/kwilteam/kwil-db/core/crypto/auth"
 	"github.com/truflation/tsn-sdk/core/tsnclient"
 	"github.com/truflation/tsn-sdk/core/types"
 	"github.com/truflation/tsn-sdk/core/util"
@@ -27,78 +29,49 @@ import (
 )
 
 func main() {
+	// handle errors appropriately in a real application
 	ctx := context.Background()
 
 	// Create TSN client
-	tsnClient, err := tsnclient.NewClient(ctx, "<https://tsn-provider-url.com>", tsnclient.WithSigner(signer))
-	if err != nil {
-		panic(err)
-	}
+	pk, _ := crypto.Secp256k1PrivateKeyFromHex("<your-private-key-hex>")
+	signer := &auth.EthPersonalSigner{Key: *pk}
+	tsnClient, _ := tsnclient.NewClient(ctx, "<https://tsn-provider-url.com>", tsnclient.WithSigner(signer))
 
 	// Generate a stream ID
 	streamId := util.GenerateStreamId("example-stream")
 
 	// Deploy a new primitive stream
-	deployTxHash, err := tsnClient.DeployStream(ctx, streamId, types.StreamTypePrimitive)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Deploy transaction hash:", deployTxHash)
+	deployTxHash, _ := tsnClient.DeployStream(ctx, streamId, types.StreamTypePrimitive)
 
 	// Wait for the transaction to be mined
-	txRes, err := tsnClient.WaitForTx(ctx, deployTxHash, time.Second)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Deploy transaction result:", txRes)
+	txRes, _ := tsnClient.WaitForTx(ctx, deployTxHash, time.Second)
 
 	// Load the deployed stream
-	stream, err := tsnClient.LoadPrimitiveStream(tsnClient.OwnStreamLocator(streamId))
-	if err != nil {
-		panic(err)
-	}
+	stream, _ := tsnClient.LoadPrimitiveStream(tsnClient.OwnStreamLocator(streamId))
 
 	// Initialize the stream
-	txHashInit, err := stream.InitializeStream(ctx)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Initialize transaction hash:", txHashInit)
+	txHashInit, _ := stream.InitializeStream(ctx)
 
 	// Wait for the initialization transaction to be mined
-	txResInit, err := tsnClient.WaitForTx(ctx, txHashInit, time.Second)
-	if err != nil {
-		panic(err)
-	}
+	txResInit, _ := tsnClient.WaitForTx(ctx, txHashInit, time.Second)
 	fmt.Println("Initialize transaction result:", txResInit)
 
 	// Insert records into the stream
-	txHashInsert, err := stream.InsertRecords(ctx, []types.InsertRecordInput{
+	txHashInsert, _ := stream.InsertRecords(ctx, []types.InsertRecordInput{
 		{
 			Value:     1,
 			DateValue: civil.Date{Year: 2023, Month: 1, Day: 1},
 		},
 	})
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Insert transaction hash:", txHashInsert)
 
 	// Wait for the insert transaction to be mined
-	txResInsert, err := tsnClient.WaitForTx(ctx, txHashInsert, time.Second)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Insert transaction result:", txResInsert)
+	_, _ = tsnClient.WaitForTx(ctx, txHashInsert, time.Second)
 
 	// Read records from the stream
-	records, err := stream.GetRecords(ctx, types.GetRecordsInput{
-		DateFrom: civil.Date{Year: 2023, Month: 1, Day: 1},
-		DateTo:   civil.Date{Year: 2023, Month: 12, Day: 31},
+	records, _ := stream.GetRecords(ctx, types.GetRecordsInput{
+		DateFrom: civil.ParseDate("2023-01-01"),
+		DateTo:   civil.ParseDate("2023-01-31"),
 	})
-	if err != nil {
-		panic(err)
-	}
 	fmt.Println("Records:", records)
 }
 
