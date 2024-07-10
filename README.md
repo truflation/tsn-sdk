@@ -90,7 +90,7 @@ Stream IDs are unique identifiers generated for each stream. They ensure consist
 
 ### Types of Data Points
 
-- **Record**: Raw data point provided by data sources.
+- **Record**: Data points used to calculate indexes. If a stream is a primitive, records are the raw data points. If a stream is composed, records are the weighted values.
 - **Index**: Calculated values derived from stream data, representing a value's growth compared to the stream's first record.
 - **Primitives**: Raw data points provided by data sources.
 
