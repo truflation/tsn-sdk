@@ -11,16 +11,20 @@ import (
 	"testing"
 )
 
+// This file contains integration tests for composed streams in the Truflation Stream Network (TSN).
+// It demonstrates the process of deploying, initializing, and querying a composed stream
+// that aggregates data from multiple primitive streams.
+
 // TestComposedStream demonstrates the process of deploying, initializing, and querying
 // a composed stream that aggregates data from multiple primitive streams in the TSN using the TSN SDK.
 func TestComposedStream(t *testing.T) {
 	ctx := context.Background()
 
-	// Parse the private key
+	// Parse the private key for authentication
 	pk, err := crypto.Secp256k1PrivateKeyFromHex(TestPrivateKey)
 	assertNoErrorOrFail(t, err, "Failed to parse private key")
 
-	// Create a signer and client
+	// Create a signer using the parsed private key
 	signer := &auth.EthPersonalSigner{Key: *pk}
 	tsnClient, err := tsnclient.NewClient(ctx, TestKwilProvider, tsnclient.WithSigner(signer))
 	assertNoErrorOrFail(t, err, "Failed to create client")
@@ -28,7 +32,7 @@ func TestComposedStream(t *testing.T) {
 	signerAddress, err := util.NewEthereumAddressFromBytes(signer.Identity())
 	assertNoErrorOrFail(t, err, "Failed to create signer address")
 
-	// Generate stream IDs for the composed stream and its child streams
+	// Generate a unique stream ID and locator for the composed stream and its child streams
 	streamId := util.GenerateStreamId("test-composed-stream")
 	streamLocator := tsnClient.OwnStreamLocator(streamId)
 
@@ -48,51 +52,41 @@ func TestComposedStream(t *testing.T) {
 
 	// Subtest for deploying, initializing, and querying the composed stream
 	t.Run("DeploymentAndReadOperations", func(t *testing.T) {
-		// Deploy the composed stream
+		// Step 1: Deploy the composed stream
+		// This creates the composed stream contract on the TSN
 		deployTxHash, err := tsnClient.DeployStream(ctx, streamId, types.StreamTypeComposed)
-		assertNoErrorOrFail(t, err, "Failed to deploy stream")
+		assertNoErrorOrFail(t, err, "Failed to deploy composed stream")
 		waitTxToBeMinedWithSuccess(t, ctx, tsnClient, deployTxHash)
 
 		// Load the deployed composed stream
 		deployedComposedStream, err := tsnClient.LoadComposedStream(streamLocator)
+		assertNoErrorOrFail(t, err, "Failed to load composed stream")
 
-		// Initialize the composed stream
+		// Step 2: Initialize the composed stream
+		// Initialization prepares the composed stream for data operations
 		txHashInit, err := deployedComposedStream.InitializeStream(ctx)
-		assertNoErrorOrFail(t, err, "Failed to initialize stream")
+		assertNoErrorOrFail(t, err, "Failed to initialize composed stream")
 		waitTxToBeMinedWithSuccess(t, ctx, tsnClient, txHashInit)
 
-		// Deploy child streams with data
+		// Step 3: Deploy child streams with initial data
+		// Deploy two primitive child streams with initial data
 		// | date       | childA | childB |
 		// |------------|--------|--------|
 		// | 2020-01-01 | 1      | 3      |
 		// | 2020-01-02 | 2      | 4      |
 
 		deployTestPrimitiveStreamWithData(t, ctx, tsnClient, childAStreamId, []types.InsertRecordInput{
-			{
-				Value:     1,
-				DateValue: *unsafeParseDate("2020-01-01"),
-			},
-			{
-				Value:     2,
-				DateValue: *unsafeParseDate("2020-01-02"),
-			},
+			{Value: 1, DateValue: *unsafeParseDate("2020-01-01")},
+			{Value: 2, DateValue: *unsafeParseDate("2020-01-02")},
 		})
 
 		deployTestPrimitiveStreamWithData(t, ctx, tsnClient, childBStreamId, []types.InsertRecordInput{
-			{
-				Value:     3,
-				DateValue: *unsafeParseDate("2020-01-01"),
-			},
-			{
-				Value:     4,
-				DateValue: *unsafeParseDate("2020-01-02"),
-			},
+			{Value: 3, DateValue: *unsafeParseDate("2020-01-01")},
+			{Value: 4, DateValue: *unsafeParseDate("2020-01-02")},
 		})
 
-		// Set taxonomies for the composed stream
-		// | childA | childB |
-		// |--------|--------|
-		// | 1      | 2      |
+		// Step 4: Set taxonomies for the composed stream
+		// Taxonomies define the structure of the composed stream
 		txHashTaxonomies, err := deployedComposedStream.SetTaxonomy(ctx, []types.TaxonomyItem{
 			{
 				ChildStream: types.StreamLocator{
@@ -119,7 +113,8 @@ func TestComposedStream(t *testing.T) {
 		assertNoErrorOrFail(t, err, "Failed to describe taxonomies")
 		assert.Equal(t, 2, len(taxonomies))
 
-		// Query the composed stream for records
+		// Step 5: Query the composed stream for records
+		// Query records within a specific date range
 		records, err := deployedComposedStream.GetRecords(ctx, types.GetRecordsInput{
 			DateFrom: unsafeParseDate("2020-01-01"),
 			DateTo:   unsafeParseDate("2020-01-02"),
