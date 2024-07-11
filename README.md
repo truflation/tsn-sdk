@@ -68,7 +68,7 @@ func main() {
 
 For more comprehensive examples and usage patterns, please refer to the test files in the SDK repository. These tests provide detailed examples of various stream operations and error-handling scenarios.
 
-## Staging Server
+## Staging Network
 
 We have a staging network accessible at https://staging.tsn.test.truflation.com. You can interact with it to test and experiment with the TSN SDK. Please use it responsibly, as TSN is currently in an experimental phase. Any contributions and feedback are welcome.
 
