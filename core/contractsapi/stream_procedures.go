@@ -161,3 +161,40 @@ func (s *Stream) GetRecord(ctx context.Context, input types.GetRecordInput) ([]t
 
 	return outputs, nil
 }
+
+type GetIndexRawOutput = GetRecordRawOutput
+
+func (s *Stream) GetIndex(ctx context.Context, input types.GetIndexInput) ([]types.StreamIndex, error) {
+	var args []any
+	args = append(args, transformOrNil(input.DateFrom, func(date civil.Date) any { return date.String() }))
+	args = append(args, transformOrNil(input.DateTo, func(date civil.Date) any { return date.String() }))
+	args = append(args, transformOrNil(input.FrozenAt, func(date time.Time) any { return date.UTC().Format(time.RFC3339) }))
+
+	results, err := s.call(ctx, "get_index", args)
+	if err != nil {
+		return nil, err
+	}
+
+	rawOutputs, err := DecodeCallResult[GetIndexRawOutput](results)
+	if err != nil {
+		return nil, err
+	}
+
+	var outputs []types.StreamIndex
+	for _, rawOutput := range rawOutputs {
+		value, _, err := apd.NewFromString(rawOutput.Value)
+		if err != nil {
+			return nil, err
+		}
+		dateValue, err := civil.ParseDate(rawOutput.DateValue)
+		if err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, types.StreamIndex{
+			DateValue: dateValue,
+			Value:     *value,
+		})
+	}
+
+	return outputs, nil
+}

@@ -69,7 +69,7 @@ func (c *Client) WaitForTx(ctx context.Context, txHash transactions.TxHash, inte
 	return c.kwilClient.WaitTx(ctx, txHash, interval)
 }
 
-func (c *Client) KwilClient() *kwilClientPkg.Client {
+func (c *Client) GetKwilClient() *kwilClientPkg.Client {
 	return c.kwilClient
 }
 
