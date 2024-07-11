@@ -19,10 +19,10 @@ Initializes the primitive stream.
 - `transactions.TxHash`: The transaction hash for the initialization.
 - `error`: An error if the initialization fails.
 
-### `GetRecords`
+### `GetRecord`
 
 ```go
-GetRecords(ctx context.Context, input types.GetRecordsInput) ([]types.StreamRecord, error)
+GetRecord(ctx context.Context, input types.GetRecordInput) ([]types.StreamRecord, error)
 ```
 
 Retrieves records from the stream based on the input criteria.

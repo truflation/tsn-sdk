@@ -54,7 +54,7 @@ func main() {
 	}
 
 	// Read data from the stream
-	records, err := stream.GetRecords(ctx, types.GetRecordsInput{
+	records, err := stream.GetRecord(ctx, types.GetRecordInput{
 		DateFrom: civil.ParseDate("2023-01-01"),
 		DateTo:   civil.ParseDate("2023-01-31"),
 	})

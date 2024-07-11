@@ -74,7 +74,7 @@ func TestPrimitiveStream(t *testing.T) {
 
 		// Query records from the stream
 		// This demonstrates how to read data from the stream
-		records, err := deployedPrimitiveStream.GetRecords(ctx, types.GetRecordsInput{
+		records, err := deployedPrimitiveStream.GetRecord(ctx, types.GetRecordInput{
 			DateFrom: unsafeParseDate("2020-01-01"),
 			DateTo:   unsafeParseDate("2021-01-01"),
 		})

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type GetRecordsInput struct {
+type GetRecordInput struct {
 	DateFrom *civil.Date
 	DateTo   *civil.Date
 	FrozenAt *time.Time
@@ -23,8 +23,8 @@ type StreamRecord struct {
 type IStream interface {
 	// InitializeStream initializes the stream. Majority of other methods need the stream to be initialized
 	InitializeStream(ctx context.Context) (transactions.TxHash, error)
-	// GetRecords reads the records of the stream within the given date range
-	GetRecords(ctx context.Context, input GetRecordsInput) ([]StreamRecord, error)
+	// GetRecord reads the records of the stream within the given date range
+	GetRecord(ctx context.Context, input GetRecordInput) ([]StreamRecord, error)
 
 	// SetReadVisibility sets the read visibility of the stream -- Private or Public
 	SetReadVisibility(ctx context.Context, visibility util.VisibilityEnum) (transactions.TxHash, error)

@@ -127,7 +127,7 @@ func transformOrNil[T any](value *T, transform func(T) any) any {
 	return transform(*value)
 }
 
-func (s *Stream) GetRecords(ctx context.Context, input types.GetRecordsInput) ([]types.StreamRecord, error) {
+func (s *Stream) GetRecord(ctx context.Context, input types.GetRecordInput) ([]types.StreamRecord, error) {
 	var args []any
 	args = append(args, transformOrNil(input.DateFrom, func(date civil.Date) any { return date.String() }))
 	args = append(args, transformOrNil(input.DateTo, func(date civil.Date) any { return date.String() }))

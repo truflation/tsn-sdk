@@ -68,7 +68,7 @@ func main() {
 	_, _ = tsnClient.WaitForTx(ctx, txHashInsert, time.Second)
 
 	// Read records from the stream
-	records, _ := stream.GetRecords(ctx, types.GetRecordsInput{
+	records, _ := stream.GetRecord(ctx, types.GetRecordInput{
 		DateFrom: civil.ParseDate("2023-01-01"),
 		DateTo:   civil.ParseDate("2023-01-31"),
 	})

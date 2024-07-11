@@ -115,7 +115,7 @@ func TestComposedStream(t *testing.T) {
 
 		// Step 5: Query the composed stream for records
 		// Query records within a specific date range
-		records, err := deployedComposedStream.GetRecords(ctx, types.GetRecordsInput{
+		records, err := deployedComposedStream.GetRecord(ctx, types.GetRecordInput{
 			DateFrom: unsafeParseDate("2020-01-01"),
 			DateTo:   unsafeParseDate("2020-01-02"),
 		})
