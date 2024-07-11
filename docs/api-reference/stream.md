@@ -35,6 +35,22 @@ Retrieves records from the stream based on the input criteria.
 - `[]types.StreamRecord`: The retrieved records.
 - `error`: An error if the retrieval fails.
 
+### `GetIndex`
+
+```go
+GetIndex(ctx context.Context, input types.GetIndexInput) ([]types.StreamIndex, error)
+```
+
+Retrieves the index of the stream based on the input criteria.
+
+**Parameters:**
+- `ctx`: The context for the operation.
+- `input`: The input criteria for retrieving the indices.
+
+**Returns:**
+- `[]types.StreamIndex`: The retrieved indices.
+- `error`: An error if the retrieval fails.
+
 ### `SetReadVisibility`
 
 ```go
