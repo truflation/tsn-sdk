@@ -74,7 +74,7 @@ func TestPrimitiveStream(t *testing.T) {
 
 		// Query records from the stream
 		// This demonstrates how to read data from the stream
-		records, err := deployedPrimitiveStream.GetRecords(ctx, types.GetRecordsInput{
+		records, err := deployedPrimitiveStream.GetRecord(ctx, types.GetRecordInput{
 			DateFrom: unsafeParseDate("2020-01-01"),
 			DateTo:   unsafeParseDate("2021-01-01"),
 		})
@@ -85,5 +85,18 @@ func TestPrimitiveStream(t *testing.T) {
 		assert.Len(t, records, 1, "Expected exactly one record")
 		assert.Equal(t, "1.000", records[0].Value.String(), "Unexpected record value")
 		assert.Equal(t, "2020-01-01", records[0].DateValue.String(), "Unexpected record date")
+
+		// Query index from the stream
+		index, err := deployedPrimitiveStream.GetIndex(ctx, types.GetIndexInput{
+			DateFrom: unsafeParseDate("2020-01-01"),
+			DateTo:   unsafeParseDate("2021-01-01"),
+		})
+		assertNoErrorOrFail(t, err, "Failed to query index")
+
+		// Verify the index's content
+		// This ensures that the inserted data matches what we expect
+		assert.Len(t, index, 1, "Expected exactly one index")
+		assert.Equal(t, "100.000", index[0].Value.String(), "Unexpected index value")
+		assert.Equal(t, "2020-01-01", index[0].DateValue.String(), "Unexpected index date")
 	})
 }

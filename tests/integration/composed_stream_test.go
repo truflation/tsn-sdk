@@ -115,7 +115,7 @@ func TestComposedStream(t *testing.T) {
 
 		// Step 5: Query the composed stream for records
 		// Query records within a specific date range
-		records, err := deployedComposedStream.GetRecords(ctx, types.GetRecordsInput{
+		records, err := deployedComposedStream.GetRecord(ctx, types.GetRecordInput{
 			DateFrom: unsafeParseDate("2020-01-01"),
 			DateTo:   unsafeParseDate("2020-01-02"),
 		})
@@ -137,5 +137,17 @@ func TestComposedStream(t *testing.T) {
 		// ( 2 *  1 +  4 *  2 ) / ( 1 +  2) = 10 / 3 = 3.333
 		checkRecord(records[0], 2.333)
 		checkRecord(records[1], 3.333)
+
+		// Step 6: Query the composed stream for index
+		// Query the index within a specific date range
+		index, err := deployedComposedStream.GetIndex(ctx, types.GetIndexInput{
+			DateFrom: unsafeParseDate("2020-01-01"),
+			DateTo:   unsafeParseDate("2020-01-02"),
+		})
+
+		assertNoErrorOrFail(t, err, "Failed to get index")
+		assert.Equal(t, 2, len(index))
+		checkRecord(index[0], 100)
+		checkRecord(index[1], 155.555)
 	})
 }

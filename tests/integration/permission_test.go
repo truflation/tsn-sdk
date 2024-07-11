@@ -71,7 +71,7 @@ func TestPermissions(t *testing.T) {
 	assertNoErrorOrFail(t, err, "Failed to load stream")
 
 	// Define input for reading records
-	readInput := types.GetRecordsInput{
+	readInput := types.GetRecordInput{
 		DateFrom: &civil.Date{Year: 2020, Month: 1, Day: 1},
 		DateTo:   &civil.Date{Year: 2020, Month: 1, Day: 1},
 	}
@@ -91,7 +91,7 @@ func TestPermissions(t *testing.T) {
 		})
 
 		// ok - public read
-		rec, err := readerPrimitiveStream.GetRecords(ctx, readInput)
+		rec, err := readerPrimitiveStream.GetRecord(ctx, readInput)
 		assertNoErrorOrFail(t, err, "Failed to read records")
 		checkRecords(t, rec)
 
@@ -102,12 +102,12 @@ func TestPermissions(t *testing.T) {
 
 		// ok - private being owner
 		// read the stream
-		rec, err = ownerPrimitiveStream.GetRecords(ctx, readInput)
+		rec, err = ownerPrimitiveStream.GetRecord(ctx, readInput)
 		assertNoErrorOrFail(t, err, "Failed to read records")
 		checkRecords(t, rec)
 
 		// fail - private without access
-		_, err = readerPrimitiveStream.GetRecords(ctx, readInput)
+		_, err = readerPrimitiveStream.GetRecord(ctx, readInput)
 		assert.Error(t, err)
 
 		// ok - private with access
@@ -117,7 +117,7 @@ func TestPermissions(t *testing.T) {
 		waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
 
 		// read the stream
-		rec, err = readerPrimitiveStream.GetRecords(ctx, readInput)
+		rec, err = readerPrimitiveStream.GetRecord(ctx, readInput)
 		assertNoErrorOrFail(t, err, "Failed to read records")
 		checkRecords(t, rec)
 	})
@@ -167,7 +167,7 @@ func TestPermissions(t *testing.T) {
 			})
 
 			// ok all public
-			rec, err := readerComposedStream.GetRecords(ctx, readInput)
+			rec, err := readerComposedStream.GetRecord(ctx, readInput)
 			assertNoErrorOrFail(t, err, "Failed to read records")
 			checkRecords(t, rec)
 
@@ -177,7 +177,7 @@ func TestPermissions(t *testing.T) {
 			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
 
 			// fail - composed stream is private without access
-			_, err = readerComposedStream.GetRecords(ctx, readInput)
+			_, err = readerComposedStream.GetRecord(ctx, readInput)
 			assert.Error(t, err)
 
 			// set the stream to public
@@ -192,7 +192,7 @@ func TestPermissions(t *testing.T) {
 			fmt.Println("set private")
 
 			// fail - child is private without access
-			_, err = readerComposedStream.GetRecords(ctx, readInput)
+			_, err = readerComposedStream.GetRecord(ctx, readInput)
 			assert.Error(t, err)
 
 			// allow read access to the reader
@@ -201,7 +201,7 @@ func TestPermissions(t *testing.T) {
 			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
 
 			// ok - primitive private but w/ access
-			rec, err = readerComposedStream.GetRecords(ctx, readInput)
+			rec, err = readerComposedStream.GetRecord(ctx, readInput)
 			assertNoErrorOrFail(t, err, "Failed to read records")
 			checkRecords(t, rec)
 
@@ -216,7 +216,7 @@ func TestPermissions(t *testing.T) {
 			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
 
 			// ok - all private but w/ access
-			rec, err = readerComposedStream.GetRecords(ctx, readInput)
+			rec, err = readerComposedStream.GetRecord(ctx, readInput)
 			assertNoErrorOrFail(t, err, "Failed to read records")
 			checkRecords(t, rec)
 		})
@@ -236,7 +236,7 @@ func TestPermissions(t *testing.T) {
 			})
 
 			// ok - public compose
-			rec, err := readerComposedStream.GetRecords(ctx, readInput)
+			rec, err := readerComposedStream.GetRecord(ctx, readInput)
 			assertNoErrorOrFail(t, err, "Failed to read records")
 			checkRecords(t, rec)
 
@@ -246,12 +246,12 @@ func TestPermissions(t *testing.T) {
 			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
 
 			// ok - reading primitive directly
-			rec, err = readerPrimitiveStream.GetRecords(ctx, readInput)
+			rec, err = readerPrimitiveStream.GetRecord(ctx, readInput)
 			assertNoErrorOrFail(t, err, "Failed to read records")
 			checkRecords(t, rec)
 
 			// fail - private without access
-			_, err = readerComposedStream.GetRecords(ctx, readInput)
+			_, err = readerComposedStream.GetRecord(ctx, readInput)
 			assert.Error(t, err)
 
 			// ok - private with access
@@ -261,7 +261,7 @@ func TestPermissions(t *testing.T) {
 			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
 
 			// read the stream
-			rec, err = readerComposedStream.GetRecords(ctx, readInput)
+			rec, err = readerComposedStream.GetRecord(ctx, readInput)
 			assertNoErrorOrFail(t, err, "Failed to read records")
 			checkRecords(t, rec)
 		})
