@@ -45,7 +45,7 @@ func main() {
 	}
 
 	// Load an existing stream
-	streamId := util.GenerateStreamId("your-stream-id")
+	streamId := util.GenerateStreamId("your-stream-name")
 	// if we intend to use streams from another provider, we create locators using the provider's address
 	streamLocator := tsnClient.OwnStreamLocator(streamId)
 	stream, err := tsnClient.LoadPrimitiveStream(streamLocator)
@@ -54,15 +54,19 @@ func main() {
 	}
 
 	// Read data from the stream
+	dateFrom, _ := civil.ParseDate("2023-01-01")
+	dateTo, _ := civil.ParseDate("2023-01-31")
 	records, err := stream.GetRecord(ctx, types.GetRecordInput{
-		DateFrom: civil.ParseDate("2023-01-01"),
-		DateTo:   civil.ParseDate("2023-01-31"),
+		DateFrom: &dateFrom,
+		DateTo:   &dateTo,
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(records)
+	for _, record := range records {
+		fmt.Println(record.DateValue, record.Value.String())
+	}
 }
 ```
 
