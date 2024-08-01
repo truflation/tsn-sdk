@@ -39,7 +39,9 @@ func NewClient(ctx context.Context, provider string, options ...Option) (*Client
 	}
 
 	// Validate the client
-	err = c.Validate()
+	if err = c.Validate(); err != nil {
+		return nil, err
+	}
 
 	return c, nil
 }
