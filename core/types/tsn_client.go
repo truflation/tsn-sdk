@@ -30,4 +30,6 @@ type Client interface {
 	OwnStreamLocator(streamId util.StreamId) StreamLocator
 	// Address of the signer used by the client
 	Address() util.EthereumAddress
+	// GetAllStreams returns all streams from the TSN network
+	GetAllStreams(ctx context.Context) ([]StreamLocator, error)
 }
