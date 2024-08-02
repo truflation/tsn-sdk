@@ -33,12 +33,15 @@ func NewClient(ctx context.Context, provider string, options ...Option) (*Client
 		return nil, err
 	}
 	c.kwilClient = kwilClient
+	c.Signer = kwilClient.Signer
 	for _, option := range options {
 		option(c)
 	}
 
 	// Validate the client
-	err = c.Validate()
+	if err = c.Validate(); err != nil {
+		return nil, err
+	}
 
 	return c, nil
 }
