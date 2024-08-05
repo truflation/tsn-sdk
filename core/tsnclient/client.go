@@ -33,7 +33,6 @@ func NewClient(ctx context.Context, provider string, options ...Option) (*Client
 		return nil, err
 	}
 	c.kwilClient = kwilClient
-	c.Signer = kwilClient.Signer
 	for _, option := range options {
 		option(c)
 	}
@@ -54,6 +53,7 @@ func (c *Client) Validate() error {
 func WithSigner(signer auth.Signer) Option {
 	return func(c *Client) {
 		c.kwilClient.Signer = signer
+		c.Signer = signer
 	}
 }
 
