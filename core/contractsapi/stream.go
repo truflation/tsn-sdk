@@ -180,7 +180,7 @@ func (s *Stream) checkDeployed(ctx context.Context) error {
 	return nil
 }
 
-func (s *Stream) call(ctx context.Context, method string, args []any) (*client.CallResult, error) {
+func (s *Stream) call(ctx context.Context, method string, args []any) (*client.Records, error) {
 	return s._client.Call(ctx, s.DBID, method, args)
 }
 
