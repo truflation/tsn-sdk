@@ -7,10 +7,10 @@ import (
 )
 
 // DecodeCallResult decodes the result of a view call to the specified struct.
-func DecodeCallResult[T any](result *client.CallResult) ([]T, error) {
+func DecodeCallResult[T any](result *client.Records) ([]T, error) {
 	// Export returns all of the records in a slice. The map in each slice is
 	// equivalent to a Record, which is keyed by the column name.
-	records := result.Records.Export()
+	records := result.Export()
 
 	// Convert the []map[string]any to JSON bytes
 	recordsBytes, err := json.Marshal(records)
