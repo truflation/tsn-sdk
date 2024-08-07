@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-// GenerateStreamId is the hash fn to generate a stream id from a string
+// GenerateStreamId is the hash fn to generate a stream Id from a string
 // it already prepends the "st" prefix to the hash, and returns the first 30 characters, to fit kwil's limit
 func GenerateStreamId(s string) StreamId {
 	hasher := sha256.New()
@@ -21,12 +21,12 @@ func GenerateStreamId(s string) StreamId {
 }
 
 type StreamId struct {
-	id string
+	Id string
 }
 
 func NewStreamId(s string) (*StreamId, error) {
 	id := StreamId{
-		id: s,
+		Id: s,
 	}
 
 	if err := id.Validate(); err != nil {
@@ -37,24 +37,24 @@ func NewStreamId(s string) (*StreamId, error) {
 }
 
 func (s *StreamId) Validate() error {
-	// verify if the string is a valid stream id
-	if len(s.id) != 32 || s.id[:2] != "st" {
-		return fmt.Errorf("invalid stream id '%s'", s)
+	// verify if the string is a valid stream Id
+	if len(s.Id) != 32 || s.Id[:2] != "st" {
+		return fmt.Errorf("invalid stream Id '%s'", s)
 	}
 	return nil
 }
 
 func (s *StreamId) String() string {
-	return s.id
+	return s.Id
 }
 
 func (s *StreamId) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf("\"%s\"", s.id)), nil
+	return []byte(fmt.Sprintf("\"%s\"", s.Id)), nil
 }
 
 func (s *StreamId) UnmarshalJSON(b []byte) error {
 	// remove quotes
-	s.id = string(b[1 : len(b)-1])
+	s.Id = string(b[1 : len(b)-1])
 	return nil
 }
 
