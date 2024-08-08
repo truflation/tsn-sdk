@@ -31,6 +31,8 @@ type IStream interface {
 	GetRecord(ctx context.Context, input GetRecordInput) ([]StreamRecord, error)
 	// GetIndex reads the index of the stream within the given date range
 	GetIndex(ctx context.Context, input GetIndexInput) ([]StreamIndex, error)
+	// GetType gets the type of the stream -- Primitive or Composed
+	GetType(ctx context.Context) (StreamType, error)
 
 	// SetReadVisibility sets the read visibility of the stream -- Private or Public
 	SetReadVisibility(ctx context.Context, visibility util.VisibilityEnum) (transactions.TxHash, error)
