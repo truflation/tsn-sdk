@@ -37,7 +37,7 @@ foreign procedure ext_get_data($date_from text, $date_to text, $frozen_at int) r
 )
 
 procedure stream_exists($data_provider text, $stream_id text) public view returns (result bool) {
-    $dbid text := generate_dbid($data_provider, $stream_id);
+    $dbid text := get_dbid($data_provider, $stream_id);
 
     for $row in SELECT * FROM get_metadata('type', true, null) {
         return true;
@@ -46,7 +46,7 @@ procedure stream_exists($data_provider text, $stream_id text) public view return
     return false;
 }
 
-procedure generate_dbid($data_provider text, $stream_id text) private view returns (result text) {
+procedure get_dbid($data_provider text, $stream_id text) private view returns (result text) {
     $starts_with_0x bool := false;
     for $row in SELECT $data_provider LIKE '0x%' as a {
         $starts_with_0x := $row.a;
@@ -55,29 +55,12 @@ procedure generate_dbid($data_provider text, $stream_id text) private view retur
     $data_provider_without_0x text;
 
     if $starts_with_0x == true {
-        // TODO: once substring, left or right function is supported, we can remove this
-        // for $row in SELECT substr($data_provider, 2) as a {
-        //     $data_provider_without_0x := $row.a;
-        // }
-        error('data provider should not start with 0x');
+        $data_provider_without_0x := substring($data_provider, 3);
     } else {
         $data_provider_without_0x := $data_provider;
     }
 
-    $encoded_stream_id := encode(lower($stream_id)::blob, 'hex');
-
-    for $row2 in SELECT
-    'x' || encode(
-        digest(
-                decode($encoded_stream_id || $data_provider_without_0x, 'hex'),
-                'sha224'
-        ),
-        'hex'
-       ) AS dbid {
-           return $row2.dbid;
-       }
-
-    error('could not generate dbid');
+    return generate_dbid($stream_id, decode($data_provider_without_0x, 'hex'));
 }
 
 // It returns every record value for every date as its own
@@ -102,7 +85,7 @@ procedure get_raw_record($date_from text, $date_to text, $frozen_at int) private
     $taxonomy_index int := 0;
     for $row2 in SELECT * FROM describe_taxonomies(true) {
         $taxonomy_index := $taxonomy_index + 1;
-        $dbid text := generate_dbid($row2.child_data_provider, $row2.child_stream_id);
+        $dbid text := get_dbid($row2.child_data_provider, $row2.child_stream_id);
         for $row3 in SELECT * FROM ext_get_data[$dbid, 'get_record']($date_from, $date_to, $frozen_at) {
             return next $row3.date_value, $row3.value, $taxonomy_index;
         }
@@ -131,7 +114,7 @@ procedure get_raw_index($date_from text, $date_to text, $frozen_at int) private 
     $taxonomy_index int := 0;
     for $row2 in SELECT * FROM describe_taxonomies(true) {
         $taxonomy_index := $taxonomy_index + 1;
-        $dbid text := generate_dbid($row2.child_data_provider, $row2.child_stream_id);
+        $dbid text := get_dbid($row2.child_data_provider, $row2.child_stream_id);
         for $row3 in SELECT * FROM ext_get_data[$dbid, 'get_index']($date_from, $date_to, $frozen_at) {
             return next $row3.date_value, $row3.value, $taxonomy_index;
         }
@@ -590,7 +573,12 @@ procedure insert_metadata(
         error('Cannot insert metadata for read-only key');
     }
 
-    $uuid uuid := uuid_generate_v5('1361df5d-0230-47b3-b2c1-37950cf51fe9'::uuid, @txid);
+    // we create one deterministic uuid for each metadata record
+    // we can't use just @txid because a single transaction can insert multiple metadata records.
+    // the result will be idempotency here too.
+    $uuid_key := @txid || $key || $value;
+
+    $uuid uuid := uuid_generate_v5('1361df5d-0230-47b3-b2c1-37950cf51fe9'::uuid, $uuid_key);
     $current_block int := @height;
 
     // insert data
@@ -864,22 +852,28 @@ procedure is_stream_allowed_to_compose() public view returns (value bool) {
 }
 
 
-procedure get_index_change($date_from text, $date_to text, $frozen_at int) public view returns table(
-    value decimal(21,3)) {
-    $index1 decimal(21,3):=0::decimal(21,3);
-    if $frozen_at == null{
+procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days_interval int) public view returns table(
+    date_value text,
+    value decimal(21,3)
+) {
+    if $frozen_at == null {
         $frozen_at := 0;
     }
-    for $row1 in SELECT * FROM get_index($date_from, $date_from, $frozen_at){
-        $index1 := $row1.value;
+
+    if $days_interval == null {
+        $days_interval := 1;
     }
-    $index2 decimal(21,3):=0::decimal(21,3);
-    for $row2 in SELECT * FROM get_index($date_to, $date_to, $frozen_at){
-        $index2 := $row2.value;
+
+    for $row1 in SELECT * FROM get_index($date_from, $date_to, $frozen_at) {
+        $prev_date_value := format_unix_timestamp((parse_unix_timestamp($row1.date_value, 'yyyy-MM-dd')::int - ($days_interval * 86400))::decimal(16,6), 'yyyy-MM-dd');
+        for $prev_row in SELECT value FROM get_index($prev_date_value, $prev_date_value, $frozen_at) {
+            if $prev_row.value != 0::decimal(21,3) {
+                return next $row1.date_value, ($row1.value - $prev_row.value) * 100.00::decimal(21,3) / $prev_row.value;
+            }
+        }
     }
-    $percentage_value decimal(21,3) := ($index2 - $index1) * 100.00::decimal(21,3) / $index1;
-    return next $percentage_value;
 }
+
 // # Miscellaneous helpers
 
 // emit_values_if is a helper function to emit values if a condition is met
