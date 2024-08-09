@@ -9,6 +9,11 @@ import (
 // GenerateStreamId is the hash fn to generate a stream id from a string
 // it already prepends the "st" prefix to the hash, and returns the first 30 characters, to fit kwil's limit
 func GenerateStreamId(s string) StreamId {
+	// if the string is already a valid stream id, return it
+	if len(s) == 32 && s[:2] == "st" {
+		return StreamId{id: s}
+	}
+
 	hasher := sha256.New()
 	hasher.Write([]byte(s))
 	hashBytes := hasher.Sum(nil)
@@ -53,8 +58,13 @@ func (s *StreamId) MarshalJSON() ([]byte, error) {
 }
 
 func (s *StreamId) UnmarshalJSON(b []byte) error {
-	// remove quotes
-	s.id = string(b[1 : len(b)-1])
+	// remove quotes if they exist
+	if b[0] == '"' && b[len(b)-1] == '"' {
+		s.id = string(b[1 : len(b)-1])
+	} else {
+		s.id = string(b)
+	}
+
 	return nil
 }
 
