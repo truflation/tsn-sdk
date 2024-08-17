@@ -147,7 +147,7 @@ func (s *Stream) GetAllowedComposeStreams(ctx context.Context) ([]types.StreamLo
 			return nil, err
 		}
 
-		streamId, err := util.NewStreamId(dbid)
+		streamId, err := util.NewStreamId(loc.Name)
 		if err != nil {
 			return nil, err
 		}
