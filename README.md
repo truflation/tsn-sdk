@@ -74,7 +74,7 @@ For more comprehensive examples and usage patterns, please refer to the test fil
 
 ## Staging Network
 
-We have a staging network accessible at https://staging.tsn.test.truflation.com. You can interact with it to test and experiment with the TSN SDK. Please use it responsibly, as TSN is currently in an experimental phase. Any contributions and feedback are welcome.
+We have a staging network accessible at https://staging.tsn.truflation.com. You can interact with it to test and experiment with the TSN SDK. Please use it responsibly, as TSN is currently in an experimental phase. Any contributions and feedback are welcome.
 
 ## Types of Streams
 
