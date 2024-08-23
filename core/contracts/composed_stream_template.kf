@@ -403,16 +403,12 @@ procedure get_record($date_from text, $date_to text, $frozen_at int) public view
     value decimal(21,3)
 ) {
     // here, we sum all of the records that were found by aggregating on the date_valie
-    for $row in
-        SELECT
-            r.date_value AS date_value,
-            SUM(r.value_with_weight)::decimal(21,3) AS total_value_with_weight,
-            SUM(r.weight)::decimal(21,3) AS total_weight
-        FROM get_record_filled($date_from, $date_to, $frozen_at) as r group by r.date_value {
-        // total_weight is not necessarily the sum of all taxonomy weights, because
-        // there might be missing data points for initial dates
-        return next $row.date_value, $row.total_value_with_weight / $row.total_weight;
-    }
+    return SELECT date_value, total_value_with_weight / total_weight as value FROM
+        (SELECT
+            date_value,
+            SUM(value_with_weight)::decimal(21,3) AS total_value_with_weight,
+            SUM(weight)::decimal(21,3) AS total_weight
+        FROM get_record_filled($date_from, $date_to, $frozen_at) group by date_value);
 }
 
 
@@ -423,16 +419,12 @@ procedure get_index($date_from text, $date_to text, $frozen_at int) public view 
     value decimal(21,3)
 ) {
     // here, we sum all of the index that were found by aggregating on the date_valie
-    for $row in
-        SELECT
-            r.date_value AS date_value,
-            SUM(r.value_with_weight)::decimal(21,3) AS total_value_with_weight,
-            SUM(r.weight)::decimal(21,3) AS total_weight
-        FROM get_index_filled($date_from, $date_to, $frozen_at) as r group by r.date_value {
-        // total_weight is not necessarily the sum of all taxonomy weights, because
-        // there might be missing data points for initial dates
-        return next $row.date_value, $row.total_value_with_weight / $row.total_weight;
-    }
+   return SELECT date_value, total_value_with_weight / total_weight as value FROM
+        (SELECT
+            date_value,
+            SUM(value_with_weight)::decimal(21,3) AS total_value_with_weight,
+            SUM(weight)::decimal(21,3) AS total_weight
+        FROM get_index_filled($date_from, $date_to, $frozen_at) group by date_value);
 }
 
 procedure is_initiated() private view returns (result bool) {
@@ -601,16 +593,18 @@ procedure get_metadata($key text, $only_latest bool, $ref text) public view retu
 
         if $only_latest == true {
             if $ref is distinct from null {
-                for $row in SELECT
+                return SELECT
                               row_id,
+                              null as value_i,
+                              null as value_f,
+                              null as value_b,
+                              null as value_s,
                               value_ref,
                               created_at
                 FROM metadata
                 WHERE metadata_key = $key AND disabled_at IS NULL AND value_ref = LOWER($ref)
                 ORDER BY created_at DESC
-                LIMIT 1 {
-                    return next $row.row_id, null, null, null, null, $row.value_ref, $row.created_at;
-                }
+                LIMIT 1;
             } else {
                 return SELECT
                               row_id,
@@ -628,15 +622,17 @@ procedure get_metadata($key text, $only_latest bool, $ref text) public view retu
         } else {
            // SHOULD BE THE EXACT CODE AS ABOVE, BUT WITHOUT LIMIT
            if $ref is distinct from null {
-               for $row2 in SELECT
+               return SELECT
                              row_id,
+                             null as value_i,
+                             null as value_f,
+                             null as value_b,
+                             null as value_s,
                              value_ref,
                              created_at
-               FROM metadata
-               WHERE metadata_key = $key AND disabled_at IS NULL AND value_ref = LOWER($ref)
-               ORDER BY created_at DESC {
-                   return next $row2.row_id, null, null, null, null, $row2.value_ref, $row2.created_at;
-               }
+                FROM metadata
+                WHERE metadata_key = $key AND disabled_at IS NULL AND value_ref = LOWER($ref)
+                ORDER BY created_at DESC;
            } else {
                return SELECT
                              row_id,
@@ -780,20 +776,17 @@ procedure describe_taxonomies($latest_version bool) public view returns table(
 
         if $latest_version == true {
             // just the latest enabled version should be returned
-            $current_version int := get_current_version(false);
-            for $row in SELECT
+            return SELECT
                 child_stream_id,
                 child_data_provider,
                 weight,
                 created_at,
                 version
             FROM taxonomies
-            WHERE version = $current_version AND disabled_at IS NULL
-            ORDER BY created_at DESC {
-                return next $row.child_stream_id, $row.child_data_provider, $row.weight, $row.created_at, $row.version;
-            }
+            WHERE version = get_current_version(false) AND disabled_at IS NULL
+            ORDER BY created_at DESC;
         } else {
-            for $row2 in SELECT
+            return SELECT
                 child_stream_id,
                 child_data_provider,
                 weight,
@@ -801,9 +794,7 @@ procedure describe_taxonomies($latest_version bool) public view returns table(
                 version
             FROM taxonomies
             WHERE disabled_at IS NULL
-            ORDER BY version DESC {
-                return next $row2.child_stream_id, $row2.child_data_provider, $row2.weight, $row2.created_at, $row2.version;
-            }
+            ORDER BY version DESC;
         }
 }
 

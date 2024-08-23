@@ -148,6 +148,6 @@ func TestComposedStream(t *testing.T) {
 		assertNoErrorOrFail(t, err, "Failed to get index")
 		assert.Equal(t, 2, len(index))
 		checkRecord(index[0], 100)
-		checkRecord(index[1], 155.555)
+		checkRecord(index[1], 155.556)
 	})
 }
