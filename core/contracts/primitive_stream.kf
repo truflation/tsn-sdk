@@ -532,22 +532,26 @@ procedure is_stream_allowed_to_compose() public view returns (value bool) {
     error('stream not allowed to compose');
 }
 
-// TODO: needs to be refactored to return two columns instead of one. issue: #32
-procedure get_index_change($date_from text, $date_to text, $frozen_at int) public view returns table(
-    value decimal(21,3)) {
-    if $frozen_at == null{
+procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days_interval int) public view returns table(
+    date_value text,
+    value decimal(21,3)
+) {
+    if $frozen_at == null {
         $frozen_at := 0;
     }
-    $index1 decimal(21,3):=0::decimal(21,3);
-    for $row1 in SELECT * FROM get_index($date_from, $date_from, $frozen_at){
-        $index1 := $row1.value;
+
+    if $days_interval == null {
+        $days_interval := 1;
     }
-    $index2 decimal(21,3):=0::decimal(21,3);
-    for $row2 in SELECT * FROM get_index($date_to, $date_to, $frozen_at){
-        $index2 := $row2.value;
+
+    for $row1 in SELECT * FROM get_index($date_from, $date_to, $frozen_at) {
+        $prev_date_value := format_unix_timestamp((parse_unix_timestamp($row1.date_value, 'yyyy-MM-dd')::int - ($days_interval * 86400))::decimal(16,6), 'yyyy-MM-dd');
+        for $prev_row in SELECT value FROM get_index($prev_date_value, $prev_date_value, $frozen_at) {
+            if $prev_row.value != 0::decimal(21,3) {
+                return next $row1.date_value, ($row1.value - $prev_row.value) * 100.00::decimal(21,3) / $prev_row.value;
+            }
+        }
     }
-    $percentage_value decimal(21,3) := ($index2 - $index1) * 100.00::decimal(21,3) / $index1;
-    return next $percentage_value;
 }
 
 // # Helper functions
