@@ -50,6 +50,9 @@ func NewStream(options NewStreamOptions) (*Stream, error) {
 	}
 
 	dbid := kwilUtils.GenerateDBID(streamId.String(), deployer)
+
+	// check if the stream is found
+	_, err = optClient.GetSchema(context.Background(), dbid)
 	if err != nil {
 		// if err contains "dataset not found", it means the stream is not deployed, then we return our error
 		if strings.Contains(err.Error(), "dataset not found") {
