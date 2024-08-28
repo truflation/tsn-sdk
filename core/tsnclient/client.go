@@ -77,17 +77,12 @@ func (c *Client) GetKwilClient() *kwilClientPkg.Client {
 }
 
 func (c *Client) DeployStream(ctx context.Context, streamId util.StreamId, streamType clientType.StreamType) (transactions.TxHash, error) {
-	out, err := tsn_api.DeployStream(ctx, tsn_api.DeployStreamInput{
+	return tsn_api.DeployStream(ctx, tsn_api.DeployStreamInput{
 		StreamId:   streamId,
 		StreamType: streamType,
 		KwilClient: c.kwilClient,
 		Deployer:   c.kwilClient.Signer.Identity(),
 	})
-	if err != nil {
-		return transactions.TxHash{}, err
-	}
-
-	return out.TxHash, nil
 }
 
 func (c *Client) DestroyStream(ctx context.Context, streamId util.StreamId) (transactions.TxHash, error) {
@@ -103,7 +98,7 @@ func (c *Client) DestroyStream(ctx context.Context, streamId util.StreamId) (tra
 }
 
 func (c *Client) LoadStream(streamLocator clientType.StreamLocator) (clientType.IStream, error) {
-	return tsn_api.NewStream(tsn_api.NewStreamOptions{
+	return tsn_api.LoadStream(tsn_api.NewStreamOptions{
 		Client:   c.kwilClient,
 		StreamId: streamLocator.StreamId,
 		Deployer: streamLocator.DataProvider.Bytes(),
@@ -111,7 +106,7 @@ func (c *Client) LoadStream(streamLocator clientType.StreamLocator) (clientType.
 }
 
 func (c *Client) LoadPrimitiveStream(streamLocator clientType.StreamLocator) (clientType.IPrimitiveStream, error) {
-	return tsn_api.NewPrimitiveStream(tsn_api.NewStreamOptions{
+	return tsn_api.LoadPrimitiveStream(tsn_api.NewStreamOptions{
 		Client:   c.kwilClient,
 		StreamId: streamLocator.StreamId,
 		Deployer: streamLocator.DataProvider.Bytes(),
@@ -119,7 +114,7 @@ func (c *Client) LoadPrimitiveStream(streamLocator clientType.StreamLocator) (cl
 }
 
 func (c *Client) LoadComposedStream(streamLocator clientType.StreamLocator) (clientType.IComposedStream, error) {
-	return tsn_api.NewComposedStream(tsn_api.NewStreamOptions{
+	return tsn_api.LoadComposedStream(tsn_api.NewStreamOptions{
 		Client:   c.kwilClient,
 		StreamId: streamLocator.StreamId,
 		Deployer: streamLocator.DataProvider.Bytes(),

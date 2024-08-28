@@ -24,8 +24,8 @@ func PrimitiveStreamFromStream(stream Stream) (*PrimitiveStream, error) {
 	}, nil
 }
 
-func NewPrimitiveStream(options NewStreamOptions) (*PrimitiveStream, error) {
-	stream, err := NewStream(options)
+func LoadPrimitiveStream(options NewStreamOptions) (*PrimitiveStream, error) {
+	stream, err := LoadStream(options)
 	if err != nil {
 		return nil, err
 	}
