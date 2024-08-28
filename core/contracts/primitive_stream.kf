@@ -209,10 +209,10 @@ procedure get_metadata($key text, $only_latest bool, $ref text) public view retu
             if $ref is distinct from null {
                 return SELECT
                               row_id,
-                              null as value_i,
-                              null as value_f,
-                              null as value_b,
-                              null as value_s,
+                              null::int as value_i,
+                              null::decimal(21,3) as value_f,
+                              null::bool as value_b,
+                              null::text as value_s,
                               value_ref,
                               created_at
                 FROM metadata
@@ -238,10 +238,10 @@ procedure get_metadata($key text, $only_latest bool, $ref text) public view retu
            if $ref is distinct from null {
                return SELECT
                              row_id,
-                             null as value_i,
-                             null as value_f,
-                             null as value_b,
-                             null as value_s,
+                             null::int as value_i,
+                             null::decimal(21,3) as value_f,
+                             null::bool as value_b,
+                             null::text as value_s,
                              value_ref,
                              created_at
                 FROM metadata
