@@ -20,12 +20,11 @@ type DeployStreamInput struct {
 }
 
 type DeployStreamOutput struct {
-	DeployedStream Stream
-	TxHash         transactions.TxHash
+	TxHash transactions.TxHash
 }
 
 // DeployStream deploys a stream to TSN
-func DeployStream(ctx context.Context, input DeployStreamInput) (*DeployStreamOutput, error) {
+func DeployStream(ctx context.Context, input DeployStreamInput) (transactions.TxHash, error) {
 	contractContent, err := GetContractContent(input)
 	schema, err := parse.Parse(contractContent)
 	if err != nil {
@@ -34,26 +33,7 @@ func DeployStream(ctx context.Context, input DeployStreamInput) (*DeployStreamOu
 
 	schema.Name = input.StreamId.String()
 
-	txHash, err := input.KwilClient.DeployDatabase(ctx, schema)
-	if err != nil {
-		return nil, err
-	}
-
-	options := NewStreamOptions{
-		Client:   input.KwilClient,
-		StreamId: input.StreamId,
-		Deployer: input.Deployer,
-	}
-
-	deployedStream, err := NewStream(options)
-	if err != nil {
-		return nil, err
-	}
-
-	return &DeployStreamOutput{
-		DeployedStream: *deployedStream,
-		TxHash:         txHash,
-	}, nil
+	return input.KwilClient.DeployDatabase(ctx, schema)
 }
 
 // GetContractContent returns the contract content based on the stream type

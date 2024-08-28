@@ -36,24 +36,48 @@ type NewStreamOptions struct {
 
 const (
 	ErrorStreamNotFound = "stream not found"
+	ErrorDatasetExists  = "dataset exists"
 )
 
+// NewStream creates a new stream, it is straightforward and only requires the stream id and the deployer
 func NewStream(options NewStreamOptions) (*Stream, error) {
 	optClient := options.Client
 	streamId := options.StreamId
 	deployer := options.Deployer
 
-	var err error
 	// if there's no deployer, let's throw an error
 	if len(deployer) == 0 {
 		return nil, fmt.Errorf("contract owner is required")
 	}
 
 	dbid := kwilUtils.GenerateDBID(streamId.String(), deployer)
-
 	// check if the stream is found
-	_, err = optClient.GetSchema(context.Background(), dbid)
-	if err != nil {
+	if _, err := optClient.GetSchema(context.Background(), dbid); err == nil {
+		// if there's no error, it means the stream is already deployed
+		return nil, fmt.Errorf(ErrorDatasetExists)
+	}
+
+	return &Stream{
+		StreamId:  streamId,
+		_deployer: deployer,
+		DBID:      dbid,
+		_client:   optClient,
+	}, nil
+}
+
+// LoadStream loads an existing stream, so it also checks if the stream is deployed
+func LoadStream(options NewStreamOptions) (*Stream, error) {
+	streamId := options.StreamId
+	deployer := options.Deployer
+	optClient := options.Client
+
+	if len(deployer) == 0 {
+		return nil, fmt.Errorf("contract owner is required")
+	}
+
+	dbid := kwilUtils.GenerateDBID(streamId.String(), deployer)
+	// check if the stream is found
+	if _, err := optClient.GetSchema(context.Background(), dbid); err != nil {
 		// if err contains "dataset not found", it means the stream is not deployed, then we return our error
 		if strings.Contains(err.Error(), "dataset not found") {
 			return nil, fmt.Errorf(ErrorStreamNotFound)
@@ -64,7 +88,7 @@ func NewStream(options NewStreamOptions) (*Stream, error) {
 
 	return &Stream{
 		StreamId:  streamId,
-		_deployer: deployer,
+		_deployer: options.Deployer,
 		DBID:      dbid,
 		_client:   optClient,
 	}, nil

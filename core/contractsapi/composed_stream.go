@@ -25,8 +25,8 @@ func ComposedStreamFromStream(stream Stream) (*ComposedStream, error) {
 	}, nil
 }
 
-func NewComposedStream(opts NewStreamOptions) (*ComposedStream, error) {
-	stream, err := NewStream(opts)
+func LoadComposedStream(opts NewStreamOptions) (*ComposedStream, error) {
+	stream, err := LoadStream(opts)
 	if err != nil {
 		return nil, err
 	}
