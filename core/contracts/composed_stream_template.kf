@@ -63,13 +63,20 @@ procedure get_dbid($data_provider text, $stream_id text) private view returns (r
     return generate_dbid($stream_id, decode($data_provider_without_0x, 'hex'));
 }
 
+
 // It returns every record value for every date as its own
 // row. e.g.:
 // 2020-06-01, 100
 // 2020-06-01, 140
 // 2020-06-02, 103
 // 2020-06-02, 143
-procedure get_raw_record($date_from text, $date_to text, $frozen_at int) private view returns table(
+procedure get_raw_record(
+    $date_from text,
+    $date_to text,
+    $frozen_at int,
+    $child_data_providers text[],
+    $child_stream_ids text[]
+) private view returns table(
     date_value text,
     value decimal(21,3),
     taxonomy_index int
@@ -81,16 +88,22 @@ procedure get_raw_record($date_from text, $date_to text, $frozen_at int) private
     // check if the stream is allowed to compose
     is_stream_allowed_to_compose();
 
-    // arrays are 1-indexed, so we match that
-    $taxonomy_index int := 0;
-    for $row2 in SELECT * FROM describe_taxonomies(true) {
-        $taxonomy_index := $taxonomy_index + 1;
-        $dbid text := get_dbid($row2.child_data_provider, $row2.child_stream_id);
-        for $row3 in SELECT * FROM ext_get_data[$dbid, 'get_record']($date_from, $date_to, $frozen_at) {
-            return next $row3.date_value, $row3.value, $taxonomy_index;
+    // check if the child_data_providers and child_stream_id are the same length
+    if array_length($child_data_providers) != array_length($child_stream_ids) {
+        error('child_data_providers and child_stream_id must be the same length');
+    }
+
+    if array_length($child_data_providers) > 0 {
+        // arrays are 1-indexed, so we match that
+        for $taxonomy_index in 1..array_length($child_data_providers) {
+            $dbid text := get_dbid($child_data_providers[$taxonomy_index], $child_stream_ids[$taxonomy_index]);
+            for $row3 in SELECT * FROM ext_get_data[$dbid, 'get_record']($date_from, $date_to, $frozen_at) {
+                return next $row3.date_value, $row3.value, $taxonomy_index;
+            }
         }
     }
 }
+
 
 // It returns every index value for every date as its own
 // row. e.g.:
@@ -98,7 +111,13 @@ procedure get_raw_record($date_from text, $date_to text, $frozen_at int) private
 // 2020-06-01, 140
 // 2020-06-02, 103
 // 2020-06-02, 143
-procedure get_raw_index($date_from text, $date_to text, $frozen_at int) private view returns table(
+procedure get_raw_index(
+    $date_from text,
+    $date_to text,
+    $frozen_at int,
+    $child_data_providers text[],
+    $child_stream_ids text[]
+) private view returns table(
     date_value text,
     value decimal(21,3),
     taxonomy_index int
@@ -110,13 +129,18 @@ procedure get_raw_index($date_from text, $date_to text, $frozen_at int) private 
     // check if the stream is allowed to compose
     is_stream_allowed_to_compose();
 
-    // arrays are 1-indexed, so we match that
-    $taxonomy_index int := 0;
-    for $row2 in SELECT * FROM describe_taxonomies(true) {
-        $taxonomy_index := $taxonomy_index + 1;
-        $dbid text := get_dbid($row2.child_data_provider, $row2.child_stream_id);
-        for $row3 in SELECT * FROM ext_get_data[$dbid, 'get_index']($date_from, $date_to, $frozen_at) {
-            return next $row3.date_value, $row3.value, $taxonomy_index;
+    // check if the child_data_providers and child_stream_id are the same length
+    if array_length($child_data_providers) != array_length($child_stream_ids) {
+        error('child_data_providers and child_stream_id must be the same length');
+    }
+
+    if array_length($child_data_providers) > 0 {
+        // arrays are 1-indexed, so we match that
+        for $taxonomy_index in 1..array_length($child_data_providers) {
+            $dbid text := get_dbid($child_data_providers[$taxonomy_index], $child_stream_ids[$taxonomy_index]);
+            for $row in SELECT * FROM ext_get_data[$dbid, 'get_index']($date_from, $date_to, $frozen_at) {
+                return next $row.date_value, $row.value, $taxonomy_index;
+            }
         }
     }
 }
@@ -130,130 +154,78 @@ procedure get_record_filled($date_from text, $date_to text, $frozen_at int) priv
     // we also return the weight, so we can calculate the total weight for a date
     weight decimal(21,3)
 ) {
+    // this will help us reset the arrays
+    $base_taxonomy_list int[];
+
     // Initialize taxonomy variables
     $taxonomy_count int := 0;
     $taxonomy_weight_list decimal(21,3)[];
     $last_values decimal(21,3)[];
+    $child_data_providers text[];
+    $child_stream_id text[];
 
     // Fetch taxonomy details
     for $row in SELECT * FROM describe_taxonomies(true) {
         $taxonomy_count := $taxonomy_count + 1;
+        $base_taxonomy_list := array_append($base_taxonomy_list, $taxonomy_count);
         $taxonomy_weight_list := array_append($taxonomy_weight_list, $row.weight);
         $last_values := array_append($last_values, null::decimal(21,3));
+        $child_data_providers := array_append($child_data_providers, $row.child_data_provider);
+        $child_stream_id := array_append($child_stream_id, $row.child_stream_id);
     }
 
-    // Initialize last values array with null values
-    // arrays are 1-indexed, so we match that
-    $current_taxonomy_index int := 0;
-    $expected_next_taxonomy_index int := 1;
-    $we_are_in_a_new_loop bool := false;
-    $reached_requested_range bool := false;
-    $prev_loop_date text := '';
+    $unemitted_taxonomies_for_date int[] := $base_taxonomy_list;
+    $removed_elements_count int := 0;
+    $prev_date text := '';
+    $current_date text := '';
 
    // what could make this process easier:
-   // - assign values to specific indexes in the array (set_array_element)
    // - use a map to store the last values, so we can easily check if a value is null
    // - better manipulation of tables as objects, then we could modify a table to
    //   fill forward without needing to return immediately on each loop
 
-    // Iterate through the records and process them
-    for $row_raw in SELECT date_value, value, taxonomy_index FROM get_raw_record($date_from, $date_to, $frozen_at) as r
-    ORDER BY r.date_value ASC, r.taxonomy_index ASC {
+    for $row_raw in SELECT * FROM get_raw_record($date_from, $date_to, $frozen_at, $child_data_providers, $child_stream_id) ORDER BY date_value, taxonomy_index {
+        $current_date := $row_raw.date_value;
 
-        // Update the last values array with the current value
-        $current_taxonomy_index := $row_raw.taxonomy_index;
-
-        // Check if we are in a new loop
-        if $prev_loop_date != $row_raw.date_value {
-            $we_are_in_a_new_loop := true;
-        } else {
-            $we_are_in_a_new_loop := false;
-        }
-
-        // Check if we reached the requested range
-        // so we can emit most recent values before date_from, if needed
-        if $reached_requested_range == false  {
-           // if date_from is null, we won't ever be in the requested range
-           // this is useful because date_from IS null means we just want the latest value
-           if $date_from IS DISTINCT FROM null {
-               // check if we reached the requested range
-               if $row_raw.date_value >= $date_from {
-                   $reached_requested_range := true;
-                   $is_exactly_date_from bool := $row_raw.date_value == $date_from;
-                   // we will emit values if we are NOT in the date_from;
-                   // it means that we skipped the date_from and we need the most recent past data
-                   for $emit_row in SELECT * FROM
-                                    emit_values_if($is_exactly_date_from == false, $prev_loop_date, $last_values, $taxonomy_weight_list) {
-                       return next $emit_row.date_value, $emit_row.value * $emit_row.weight, $emit_row.weight;
-                   }
-               }
-           }
-        }
-
-         // we will only emit values if we are in the requested range
-         // we won't use the else statement, because it might have been assigned in this same
-         // loop iteration
-         if $reached_requested_range == true {
-            // here we are already processing the requested range
-            // our objective is filling last loop and present loop gaps
-
-            // Handle the new loop case
-            if $we_are_in_a_new_loop == true {
-                // did we expect to be in the new loop?
-                if $expected_next_taxonomy_index != 1 {
-                    // We're in a new loop, but we have some missing values from the previous loop
-                    // Fill the gap of the previous date
-                    for $i in $expected_next_taxonomy_index..$taxonomy_count {
-                        if $last_values[$i] is not null {
-                            return next $prev_loop_date, $last_values[$i] * $taxonomy_weight_list[$i], $taxonomy_weight_list[$i];
+        // Emit filled values for previous date if date has changed
+        if $current_date != $prev_date {
+            if $prev_date is distinct from '' {
+                for $unemitted_taxonomy in $unemitted_taxonomies_for_date {
+                    // TODO: remove this when we have slices
+                    if $unemitted_taxonomy is distinct from null {
+                        if $last_values[$unemitted_taxonomy] is distinct from null {
+                            return next $prev_date, $last_values[$unemitted_taxonomy] * $taxonomy_weight_list[$unemitted_taxonomy], $taxonomy_weight_list[$unemitted_taxonomy];
                         }
                     }
                 }
-
-                // Maybe we didn't start the loop at the first taxonomy
-                for $i1 in 1..($current_taxonomy_index - 1) {
-                    if $last_values[$i1] is distinct from null {
-                        return next $row_raw.date_value, $last_values[$i1] * $taxonomy_weight_list[$i1], $taxonomy_weight_list[$i1];
-                    }
-                }
-            } else {
-                // we're not in a new loop, let's fill the gaps between the last and the current taxonomy
-                // if we are in the expected next index, the loop won't run
-                for $i2 in $expected_next_taxonomy_index..$current_taxonomy_index - 1 {
-                    // if last values is not null, we should return it
-                    if $last_values[$i2] is not null {
-                        return next $row_raw.date_value, $last_values[$i2] * $taxonomy_weight_list[$i2], $taxonomy_weight_list[$i2];
-                    } else {
-                        // it's null. We don't need to return nothing, because its weight shouldn't be counted in the sum
-                        // but let's maintain the else statement for clarity
-                    }
-                }
+                // we're moving to a new date, let's clear the unemitted_taxonomies_for_date list and the removed_elements_count
+                $unemitted_taxonomies_for_date := $base_taxonomy_list;
+                $removed_elements_count := 0;
             }
+        }
 
-        // Adjust next expected index, reset if needed
-            $expected_next_taxonomy_index := $current_taxonomy_index + 1;
-            if $expected_next_taxonomy_index > $taxonomy_count {
-                $expected_next_taxonomy_index := 1;
-            }
+        $last_values[$row_raw.taxonomy_index] := $row_raw.value;
 
-            // Return the current row value
-            return next $row_raw.date_value, $row_raw.value * $taxonomy_weight_list[$current_taxonomy_index], $taxonomy_weight_list[$current_taxonomy_index];
+        // Emit current value
+        return next $current_date, $row_raw.value * $taxonomy_weight_list[$row_raw.taxonomy_index], $taxonomy_weight_list[$row_raw.taxonomy_index];
 
-         }
+        // let's remove the emitted taxonomy from the unemitted_taxonomies_for_date list
+        // we need to subtract the removed_elements_count because the array is shrinking
+        // $unemitted_taxonomies_for_date := remove_array_element($unemitted_taxonomies_for_date, $row_raw.taxonomy_index - $removed_elements_count);
+        // $removed_elements_count := $removed_elements_count + 1;
+        // remove elements is not performant without slices. Then let's make the elements null for now
+        $unemitted_taxonomies_for_date[$row_raw.taxonomy_index] := null;
 
-        // Update the last values array with the already processed value
-        $prev_loop_date := $row_raw.date_value;
-        $last_values := set_array_element($last_values, $row_raw.taxonomy_index, $row_raw.value);
+        $prev_date := $current_date;
     }
 
-    // Final check to fill any remaining gaps
-    if $expected_next_taxonomy_index != 1 OR $reached_requested_range == false {
-        for $i3 in $expected_next_taxonomy_index..$taxonomy_count {
-            if $last_values[$i3] is not null {
-                return next $prev_loop_date, $last_values[$i3] * $taxonomy_weight_list[$i3], $taxonomy_weight_list[$i3];
-            } else {
-                // it's null. We don't need to return nothing, because its weight shouldn't be counted in the sum
-                // but let's maintain the else statement for clarity
+    // Emit filled values for the last date
+    if $prev_date is distinct from '' {
+        if $taxonomy_count > 0 {
+            for $unemitted_taxonomy2 in $unemitted_taxonomies_for_date {
+                if $last_values[$unemitted_taxonomy2] is distinct from null {
+                    return next $prev_date, $last_values[$unemitted_taxonomy2] * $taxonomy_weight_list[$unemitted_taxonomy2], $taxonomy_weight_list[$unemitted_taxonomy2];
+                }
             }
         }
     }
@@ -268,129 +240,78 @@ procedure get_index_filled($date_from text, $date_to text, $frozen_at int) priva
     // we also return the weight, so we can calculate the total weight for a date
     weight decimal(21,3)
 ) {
+    // this will help us reset the arrays
+    $base_taxonomy_list int[];
+
     // Initialize taxonomy variables
     $taxonomy_count int := 0;
     $taxonomy_weight_list decimal(21,3)[];
     $last_values decimal(21,3)[];
+    $child_data_providers text[];
+    $child_stream_id text[];
 
     // Fetch taxonomy details
     for $row in SELECT * FROM describe_taxonomies(true) {
         $taxonomy_count := $taxonomy_count + 1;
+        $base_taxonomy_list := array_append($base_taxonomy_list, $taxonomy_count);
         $taxonomy_weight_list := array_append($taxonomy_weight_list, $row.weight);
         $last_values := array_append($last_values, null::decimal(21,3));
+        $child_data_providers := array_append($child_data_providers, $row.child_data_provider);
+        $child_stream_id := array_append($child_stream_id, $row.child_stream_id);
     }
 
-    // Initialize last values array with null values
-    // arrays are 1-indexed, so we match that
-    $current_taxonomy_index int := 0;
-    $expected_next_taxonomy_index int := 1;
-    $we_are_in_a_new_loop bool := false;
-    $reached_requested_range bool := false;
-    $prev_loop_date text := '';
+    $unemitted_taxonomies_for_date int[] := $base_taxonomy_list;
+    $removed_elements_count int := 0;
+    $prev_date text := '';
+    $current_date text := '';
 
-   // what could make this process easier:
-   // - assign values to specific indexes in the array (set_array_element)
+       // what could make this process easier:
    // - use a map to store the last values, so we can easily check if a value is null
    // - better manipulation of tables as objects, then we could modify a table to
    //   fill forward without needing to return immediately on each loop
 
-    // Iterate through the index and process them
-    for $row_raw in SELECT date_value, value, taxonomy_index FROM get_raw_index($date_from, $date_to, $frozen_at) as r
-    ORDER BY r.date_value ASC, r.taxonomy_index ASC {
+    for $row_raw in SELECT * FROM get_raw_index($date_from, $date_to, $frozen_at, $child_data_providers, $child_stream_id) ORDER BY date_value, taxonomy_index {
+        $current_date := $row_raw.date_value;
 
-        // Update the last values array with the current value
-        $current_taxonomy_index := $row_raw.taxonomy_index;
-
-        // Check if we are in a new loop
-        if $prev_loop_date != $row_raw.date_value {
-            $we_are_in_a_new_loop := true;
-        } else {
-            $we_are_in_a_new_loop := false;
-        }
-
-        // Check if we reached the requested range
-        // so we can emit most recent values before date_from, if needed
-        if $reached_requested_range == false  {
-           // if date_from is null, we won't ever be in the requested range
-           // this is useful because date_from IS null means we just want the latest value
-           if $date_from IS DISTINCT FROM null {
-               // check if we reached the requested range
-               if $row_raw.date_value >= $date_from {
-                   $reached_requested_range := true;
-                   $is_exactly_date_from bool := $row_raw.date_value == $date_from;
-                   // we will emit values if we are NOT in the date_from;
-                   // it means that we skipped the date_from and we need the most recent past data
-                   for $emit_row in
-                    SELECT * FROM emit_values_if($is_exactly_date_from == false, $prev_loop_date, $last_values, $taxonomy_weight_list) {
-                       return next $emit_row.date_value, $emit_row.value * $emit_row.weight, $emit_row.weight;
-                   }
-               }
-           }
-        }
-
-         // we will only emit values if we are in the requested range
-         // we won't use the else statement, because it might have been assigned in this same
-         // loop iteration
-         if $reached_requested_range == true {
-            // here we are already processing the requested range
-            // our objective is filling last loop and present loop gaps
-
-            // Handle the new loop case
-            if $we_are_in_a_new_loop == true {
-                // did we expect to be in the new loop?
-                if $expected_next_taxonomy_index != 1 {
-                    // We're in a new loop, but we have some missing values from the previous loop
-                    // Fill the gap of the previous date
-                    for $i in $expected_next_taxonomy_index..$taxonomy_count {
-                        if $last_values[$i] is not null {
-                            return next $prev_loop_date, $last_values[$i] * $taxonomy_weight_list[$i], $taxonomy_weight_list[$i];
+        // Emit filled values for previous date if date has changed
+        if $current_date != $prev_date {
+            if $prev_date is distinct from '' {
+                for $unemitted_taxonomy in $unemitted_taxonomies_for_date {
+                    // TODO: remove this when we have slices
+                    if $unemitted_taxonomy is distinct from null {
+                        if $last_values[$unemitted_taxonomy] is distinct from null {
+                            return next $prev_date, $last_values[$unemitted_taxonomy] * $taxonomy_weight_list[$unemitted_taxonomy], $taxonomy_weight_list[$unemitted_taxonomy];
                         }
                     }
                 }
-
-                // Maybe we didn't start the loop at the first taxonomy
-                for $i1 in 1..($current_taxonomy_index - 1) {
-                    if $last_values[$i1] is distinct from null {
-                        return next $row_raw.date_value, $last_values[$i1] * $taxonomy_weight_list[$i1], $taxonomy_weight_list[$i1];
-                    }
-                }
-            } else {
-                // we're not in a new loop, let's fill the gaps between the last and the current taxonomy
-                // if we are in the expected next index, the loop won't run
-                for $i2 in $expected_next_taxonomy_index..$current_taxonomy_index - 1 {
-                    // if last values is not null, we should return it
-                    if $last_values[$i2] is not null {
-                        return next $row_raw.date_value, $last_values[$i2] * $taxonomy_weight_list[$i2], $taxonomy_weight_list[$i2];
-                    } else {
-                        // it's null. We don't need to return nothing, because its weight shouldn't be counted in the sum
-                        // but let's maintain the else statement for clarity
-                    }
-                }
+                // we're moving to a new date, let's clear the unemitted_taxonomies_for_date list and the removed_elements_count
+                $unemitted_taxonomies_for_date := $base_taxonomy_list;
+                $removed_elements_count := 0;
             }
+        }
 
-            // Adjust next expected index, reset if needed
-            $expected_next_taxonomy_index := $current_taxonomy_index + 1;
-            if $expected_next_taxonomy_index > $taxonomy_count {
-                $expected_next_taxonomy_index := 1;
-            }
+        $last_values[$row_raw.taxonomy_index] := $row_raw.value;
 
-            // Return the current row value
-            return next $row_raw.date_value, $row_raw.value * $taxonomy_weight_list[$current_taxonomy_index], $taxonomy_weight_list[$current_taxonomy_index];
-         }
+        // Emit current value
+        return next $current_date, $row_raw.value * $taxonomy_weight_list[$row_raw.taxonomy_index], $taxonomy_weight_list[$row_raw.taxonomy_index];
 
-        // Update the last values array with the already processed value
-        $prev_loop_date := $row_raw.date_value;
-        $last_values := set_array_element($last_values, $row_raw.taxonomy_index, $row_raw.value);
+        // let's remove the emitted taxonomy from the unemitted_taxonomies_for_date list
+        // we need to subtract the removed_elements_count because the array is shrinking
+        // $unemitted_taxonomies_for_date := remove_array_element($unemitted_taxonomies_for_date, $row_raw.taxonomy_index - $removed_elements_count);
+        // $removed_elements_count := $removed_elements_count + 1;
+        // remove elements is not performant without slices. Then let's make the elements null for now
+        $unemitted_taxonomies_for_date[$row_raw.taxonomy_index] := null;
+
+        $prev_date := $current_date;
     }
 
-    // Final check to fill any remaining gaps
-    if $expected_next_taxonomy_index != 1 OR $reached_requested_range == false {
-        for $i3 in $expected_next_taxonomy_index..$taxonomy_count {
-            if $last_values[$i3] is not null {
-                return next $prev_loop_date, $last_values[$i3] * $taxonomy_weight_list[$i3], $taxonomy_weight_list[$i3];
-            } else {
-                // it's null. We don't need to return nothing, because its weight shouldn't be counted in the sum
-                // but let's maintain the else statement for clarity
+    // Emit filled values for the last date
+    if $prev_date is distinct from '' {
+        if $taxonomy_count > 0 {
+            for $unemitted_taxonomy2 in $unemitted_taxonomies_for_date {
+                if $last_values[$unemitted_taxonomy2] is distinct from null {
+                    return next $prev_date, $last_values[$unemitted_taxonomy2] * $taxonomy_weight_list[$unemitted_taxonomy2], $taxonomy_weight_list[$unemitted_taxonomy2];
+                }
             }
         }
     }
@@ -402,13 +323,38 @@ procedure get_record($date_from text, $date_to text, $frozen_at int) public view
     date_value text,
     value decimal(21,3)
 ) {
+    $in_range bool := false;
+    $last_date text;
+    $last_value decimal(21,3);
     // here, we sum all of the records that were found by aggregating on the date_valie
-    return SELECT date_value, total_value_with_weight / total_weight as value FROM
+    for $row in SELECT date_value, total_value_with_weight / total_weight as value FROM
         (SELECT
             date_value,
             SUM(value_with_weight)::decimal(21,3) AS total_value_with_weight,
             SUM(weight)::decimal(21,3) AS total_weight
-        FROM get_record_filled($date_from, $date_to, $frozen_at) group by date_value);
+        FROM get_record_filled($date_from, $date_to, $frozen_at) group by date_value) as r {
+        // when we arrive in the range, we start emitting. If there was a previous value, we emit it
+        if $in_range == false {
+            if $row.date_value >= $date_from {
+                $in_range := true;
+                if $last_date is distinct from null {
+                    return next $last_date, $last_value;
+                }
+            }
+
+            $last_date := $row.date_value;
+            $last_value := $row.value;
+        }
+        // we check again, because it might just have entered the range
+        if $in_range == true {
+            return next $row.date_value, $row.value;
+        }
+    }
+
+    // if we finished the loop and we never entered the range, we emit the last value
+    if $in_range == false {
+        return next $last_date, $last_value;
+    }
 }
 
 
@@ -418,13 +364,39 @@ procedure get_index($date_from text, $date_to text, $frozen_at int) public view 
     date_value text,
     value decimal(21,3)
 ) {
-    // here, we sum all of the index that were found by aggregating on the date_valie
-   return SELECT date_value, total_value_with_weight / total_weight as value FROM
+    $in_range bool := false;
+    $last_date text;
+    $last_value decimal(21,3);
+    // here, we sum all of the indexes that were found by aggregating on the date_value
+    for $row in SELECT date_value, total_value_with_weight / total_weight as value FROM
         (SELECT
             date_value,
             SUM(value_with_weight)::decimal(21,3) AS total_value_with_weight,
             SUM(weight)::decimal(21,3) AS total_weight
-        FROM get_index_filled($date_from, $date_to, $frozen_at) group by date_value);
+        FROM get_index_filled($date_from, $date_to, $frozen_at) group by date_value) as r {
+        // when we arrive in the range, we start emitting. If there was a previous value, we emit it
+        if $in_range == false {
+            if $row.date_value >= $date_from {
+                $in_range := true;
+                if $last_date is distinct from null {
+                    return next $last_date, $last_value;
+                }
+            }
+
+            $last_date := $row.date_value;
+            $last_value := $row.value;
+        }
+        // we check again, because it might just have entered the range
+        if $in_range == true {
+            return next $row.date_value, $row.value;
+        }
+    }
+
+    // if we finished the loop and we never entered the range, we emit the last value
+    if $in_range == false {
+        return next $last_date, $last_value;
+    }
+
 }
 
 procedure is_initiated() private view returns (result bool) {
@@ -847,19 +819,117 @@ procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days
     date_value text,
     value decimal(21,3)
 ) {
+    // the full process is this:
+    // 1. we find the current values for the given date range
+    // | date | value |
+    // | 01-2001 | ... |
+    // | 05-2001 | ... |
+    // | 09-2001 | ... |
+    // | 10-2001 | ... |
+
+    // 2. we get a list of expected previous dates
+    // | current_date | expected_prev_date |
+    // | 01-2001       | 01-2000            |
+    // | 05-2001       | 05-2000            |
+    // | 09-2001       | 09-2000            |
+    // | 10-2001       | 10-2000            |
+
+    // 3. we query the real previous values for the expected previous dates, using earliest and latest dates
+    // they might not match the expected previous dates
+    // | real_prev_date | value |
+    // | 01-2000        | ... |
+    // | 03-2000        | ... |
+    // | 04-2000        | ... |
+    // | 09-2000        | ... |
+
+    // 4. we try to match the expected prev dates with the real prev dates.
+    // see that each expected date should be 1:1 with a result prev date.
+    // | expected_prev_date | real_prev_date | result_prev_date |
+    // | 01-2000            | 01-2000        | 01-2000         |
+    // | -                  | 03-2000        | -               |
+    // | -                  | 04-2000        | -               |
+    // | 05-2000            | -              | 04-2000         |
+    // | 09-2000            | 09-2000        | 09-2000         |
+    // | 10-2000            | -              | 09-2000         |
+
+    // 5. we calculate the index change for the current values and the result prev values
+    // and done.
+
+
+
     if $frozen_at == null {
         $frozen_at := 0;
     }
 
     if $days_interval == null {
-        $days_interval := 1;
+        error('days_interval is required');
     }
 
-    for $row1 in SELECT * FROM get_index($date_from, $date_to, $frozen_at) {
-        $prev_date_value := format_unix_timestamp((parse_unix_timestamp($row1.date_value, 'yyyy-MM-dd')::int - ($days_interval * 86400))::decimal(16,6), 'yyyy-MM-dd');
-        for $prev_row in SELECT value FROM get_index($prev_date_value, $prev_date_value, $frozen_at) {
-            if $prev_row.value != 0::decimal(21,3) {
-                return next $row1.date_value, ($row1.value - $prev_row.value) * 100.00::decimal(21,3) / $prev_row.value;
+    $current_values decimal(21,3)[];
+    // example: [01-2001, 05-2001, 09-2001, 10-2001]
+    $current_dates text[];
+    // example: [01-2000, 05-2000, 09-2000, 10-2000]
+    $expected_prev_dates text[];
+
+    for $row_current in SELECT * FROM get_index($date_from, $date_to, $frozen_at) {
+        $prev_date := format_unix_timestamp((parse_unix_timestamp($row_current.date_value, 'yyyy-MM-dd')::int - ($days_interval * 86400))::decimal(16,6), 'yyyy-MM-dd');
+        $expected_prev_dates := array_append($expected_prev_dates, $prev_date);
+        $current_values := array_append($current_values, $row_current.value);
+        $current_dates := array_append($current_dates, $row_current.date_value);
+    }
+
+    // example: 01-2000]
+    $earliest_prev_date := $expected_prev_dates[1];
+    // example: 09-2000
+    $latest_prev_date := $expected_prev_dates[array_length($expected_prev_dates)];
+
+    // real previous values doesn't match the same length as expected previous dates
+    // because the interval can have much more values than the expected dates
+    $real_prev_values decimal(21,3)[];
+    $real_prev_dates text[];
+
+    // now we query the prev dates
+    for $row_prev in SELECT * FROM get_index($earliest_prev_date, $latest_prev_date, $frozen_at) {
+        $real_prev_values := array_append($real_prev_values, $row_prev.value);
+        $real_prev_dates := array_append($real_prev_dates, $row_prev.date_value);
+    }
+
+    // now we calculate the matching dates for the real prev values
+    $result_prev_dates text[];
+    $result_prev_values decimal(21,3)[];
+
+    $real_prev_date_idx int := 1;
+
+    // for each expected prev date, we find the matching real prev date
+    if array_length($expected_prev_dates) > 0 {
+        for $expected_prev_date_idx in 1..array_length($expected_prev_dates) {
+            // we start from the last index of real prev dates. we don't need to check previous values
+            for $selector in $real_prev_date_idx..array_length($real_prev_dates) {
+                // if next real prev date is greater than expected prev date (or null), then we need to use the current real value
+                if $real_prev_dates[$selector + 1] > $expected_prev_dates[$expected_prev_date_idx] OR $real_prev_dates[$selector + 1] IS NULL {
+                    $result_prev_dates := array_append($result_prev_dates, $real_prev_dates[$selector]);
+                    $result_prev_values := array_append($result_prev_values, $real_prev_values[$selector]);
+                    // we already appended one for current $real_prev_date_idx, then we need to go to next
+                    $real_prev_date_idx := $selector;
+                    break;
+                }
+            }
+        }
+    }
+
+    // check if we have the same number of values and dates
+    if array_length($current_dates) != array_length($result_prev_dates) {
+        error('we have different number of dates and values');
+    }
+    if array_length($current_values) != array_length($result_prev_values) {
+        error('we have different number of dates and values');
+    }
+
+    // calculate the index change
+    if array_length($result_prev_dates) > 0 {
+        for $row_result in 1..array_length($result_prev_dates) {
+            if $result_prev_values[$row_result] != 0::decimal(21,3) {
+                return next $current_dates[$row_result], ($current_values[$row_result] - $result_prev_values[$row_result]) * 100.00::decimal(21,3) / $result_prev_values[$row_result];
             }
         }
     }
@@ -874,23 +944,21 @@ procedure emit_values_if($condition bool, $date_value text, $values decimal(21,3
     weight decimal(21,3)
 ) {
     if $condition == true {
-        for $i in 1..array_length($values) {
-            return next $date_value, $values[$i], $weights[$i];
+        if array_length($values) > 0 {
+            for $i in 1..array_length($values) {
+                return next $date_value, $values[$i], $weights[$i];
+            }
         }
     }
 }
 
-// helper function to set an array element at a given index
-procedure set_array_element($array decimal(21,3)[], $index int, $value decimal(21,3)) private view returns (result decimal(21,3)[]) {
-    // we can't use this because of the lack of support for array assignment
-    // such as $array[$index] := $value;
-    $new_array decimal(21,3)[];
-    // arrays are 1-indexed, so we match that
-    $last_index int := array_length($array);
-    for $i in 1..$last_index {
-        if $i == $index {
-            $new_array := array_append($new_array, $value);
-        } else {
+
+procedure remove_array_element($array int[], $index int) private view returns (result int[]) {
+    // todo: this is too inefficient.
+    // we should use slices (i.e. arr[1:3]) when supported
+    $new_array int[];
+    for $i in 1..array_length($array) {
+        if $i != $index {
             $new_array := array_append($new_array, $array[$i]);
         }
     }
