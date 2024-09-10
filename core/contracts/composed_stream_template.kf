@@ -191,12 +191,12 @@ procedure get_record_filled($date_from text, $date_to text, $frozen_at int) priv
         if $current_date != $prev_date {
             if $prev_date is distinct from '' {
                 for $unemitted_taxonomy in $unemitted_taxonomies_for_date {
-                    // TODO: remove this when we have slices
-                    if $unemitted_taxonomy is distinct from null {
+                    // TODO: remove this when we have slices or include if we have just index assignment
+                    // if $unemitted_taxonomy is distinct from null {
                         if $last_values[$unemitted_taxonomy] is distinct from null {
                             return next $prev_date, $last_values[$unemitted_taxonomy] * $taxonomy_weight_list[$unemitted_taxonomy], $taxonomy_weight_list[$unemitted_taxonomy];
                         }
-                    }
+                    // }
                 }
                 // we're moving to a new date, let's clear the unemitted_taxonomies_for_date list and the removed_elements_count
                 $unemitted_taxonomies_for_date := $base_taxonomy_list;
@@ -204,17 +204,20 @@ procedure get_record_filled($date_from text, $date_to text, $frozen_at int) priv
             }
         }
 
-        $last_values[$row_raw.taxonomy_index] := $row_raw.value;
+        // TODO: uncomment when we have index assignment
+        // $last_values[$row_raw.taxonomy_index] := $row_raw.value;
+        $last_values := array_update_element($last_values, $row_raw.taxonomy_index, $row_raw.value);
 
         // Emit current value
         return next $current_date, $row_raw.value * $taxonomy_weight_list[$row_raw.taxonomy_index], $taxonomy_weight_list[$row_raw.taxonomy_index];
 
         // let's remove the emitted taxonomy from the unemitted_taxonomies_for_date list
         // we need to subtract the removed_elements_count because the array is shrinking
-        // $unemitted_taxonomies_for_date := remove_array_element($unemitted_taxonomies_for_date, $row_raw.taxonomy_index - $removed_elements_count);
-        // $removed_elements_count := $removed_elements_count + 1;
+        // TODO: we can improve it when we either can remove elements, or with array element assignment
+        $unemitted_taxonomies_for_date := remove_array_element($unemitted_taxonomies_for_date, $row_raw.taxonomy_index - $removed_elements_count);
+        $removed_elements_count := $removed_elements_count + 1;
         // remove elements is not performant without slices. Then let's make the elements null for now
-        $unemitted_taxonomies_for_date[$row_raw.taxonomy_index] := null;
+        // $unemitted_taxonomies_for_date[$row_raw.taxonomy_index] := null;
 
         $prev_date := $current_date;
     }
@@ -277,12 +280,12 @@ procedure get_index_filled($date_from text, $date_to text, $frozen_at int) priva
         if $current_date != $prev_date {
             if $prev_date is distinct from '' {
                 for $unemitted_taxonomy in $unemitted_taxonomies_for_date {
-                    // TODO: remove this when we have slices
-                    if $unemitted_taxonomy is distinct from null {
+                    // TODO: remove this when we have slices or include if we have just index assignment
+                    // if $unemitted_taxonomy is distinct from null {
                         if $last_values[$unemitted_taxonomy] is distinct from null {
                             return next $prev_date, $last_values[$unemitted_taxonomy] * $taxonomy_weight_list[$unemitted_taxonomy], $taxonomy_weight_list[$unemitted_taxonomy];
                         }
-                    }
+                    // }
                 }
                 // we're moving to a new date, let's clear the unemitted_taxonomies_for_date list and the removed_elements_count
                 $unemitted_taxonomies_for_date := $base_taxonomy_list;
@@ -290,17 +293,20 @@ procedure get_index_filled($date_from text, $date_to text, $frozen_at int) priva
             }
         }
 
-        $last_values[$row_raw.taxonomy_index] := $row_raw.value;
+        // TODO: uncomment when we have index assignment
+        // $last_values[$row_raw.taxonomy_index] := $row_raw.value;
+        $last_values := array_update_element($last_values, $row_raw.taxonomy_index, $row_raw.value);
 
         // Emit current value
         return next $current_date, $row_raw.value * $taxonomy_weight_list[$row_raw.taxonomy_index], $taxonomy_weight_list[$row_raw.taxonomy_index];
 
         // let's remove the emitted taxonomy from the unemitted_taxonomies_for_date list
         // we need to subtract the removed_elements_count because the array is shrinking
-        // $unemitted_taxonomies_for_date := remove_array_element($unemitted_taxonomies_for_date, $row_raw.taxonomy_index - $removed_elements_count);
-        // $removed_elements_count := $removed_elements_count + 1;
+        // TODO: we can improve it when we either can remove elements, or with array element assignment
+        $unemitted_taxonomies_for_date := remove_array_element($unemitted_taxonomies_for_date, $row_raw.taxonomy_index - $removed_elements_count);
+        $removed_elements_count := $removed_elements_count + 1;
         // remove elements is not performant without slices. Then let's make the elements null for now
-        $unemitted_taxonomies_for_date[$row_raw.taxonomy_index] := null;
+        // $unemitted_taxonomies_for_date[$row_raw.taxonomy_index] := null;
 
         $prev_date := $current_date;
     }
@@ -963,5 +969,17 @@ procedure remove_array_element($array int[], $index int) private view returns (r
         }
     }
 
+    return $new_array;
+}
+
+procedure array_update_element($array decimal(21,3)[], $index int, $value decimal(21,3)) private view returns (result decimal(21,3)[]) {
+    $new_array decimal(21,3)[];
+    for $i in 1..array_length($array) {
+        if $i == $index {
+            $new_array := array_append($new_array, $value);
+        } else {
+            $new_array := array_append($new_array, $array[$i]);
+        }
+    }
     return $new_array;
 }
