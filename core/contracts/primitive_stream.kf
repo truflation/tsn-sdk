@@ -536,23 +536,122 @@ procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days
     date_value text,
     value decimal(21,3)
 ) {
+    // the full process is this:
+    // 1. we find the current values for the given date range
+    // | date | value |
+    // | 01-2001 | ... |
+    // | 05-2001 | ... |
+    // | 09-2001 | ... |
+    // | 10-2001 | ... |
+
+    // 2. we get a list of expected previous dates
+    // | current_date | expected_prev_date |
+    // | 01-2001       | 01-2000            |
+    // | 05-2001       | 05-2000            |
+    // | 09-2001       | 09-2000            |
+    // | 10-2001       | 10-2000            |
+
+    // 3. we query the real previous values for the expected previous dates, using earliest and latest dates
+    // they might not match the expected previous dates
+    // | real_prev_date | value |
+    // | 01-2000        | ... |
+    // | 03-2000        | ... |
+    // | 04-2000        | ... |
+    // | 09-2000        | ... |
+
+    // 4. we try to match the expected prev dates with the real prev dates.
+    // see that each expected date should be 1:1 with a result prev date.
+    // | expected_prev_date | real_prev_date | result_prev_date |
+    // | 01-2000            | 01-2000        | 01-2000         |
+    // | -                  | 03-2000        | -               |
+    // | -                  | 04-2000        | -               |
+    // | 05-2000            | -              | 04-2000         |
+    // | 09-2000            | 09-2000        | 09-2000         |
+    // | 10-2000            | -              | 09-2000         |
+
+    // 5. we calculate the index change for the current values and the result prev values
+    // and done.
+
+
+
     if $frozen_at == null {
         $frozen_at := 0;
     }
 
     if $days_interval == null {
-        $days_interval := 1;
+        error('days_interval is required');
     }
 
-    for $row1 in SELECT * FROM get_index($date_from, $date_to, $frozen_at) {
-        $prev_date_value := format_unix_timestamp((parse_unix_timestamp($row1.date_value, 'yyyy-MM-dd')::int - ($days_interval * 86400))::decimal(16,6), 'yyyy-MM-dd');
-        for $prev_row in SELECT value FROM get_index($prev_date_value, $prev_date_value, $frozen_at) {
-            if $prev_row.value != 0::decimal(21,3) {
-                return next $row1.date_value, ($row1.value - $prev_row.value) * 100.00::decimal(21,3) / $prev_row.value;
+    $current_values decimal(21,3)[];
+    // example: [01-2001, 05-2001, 09-2001, 10-2001]
+    $current_dates text[];
+    // example: [01-2000, 05-2000, 09-2000, 10-2000]
+    $expected_prev_dates text[];
+
+    for $row_current in SELECT * FROM get_index($date_from, $date_to, $frozen_at) {
+        $prev_date := format_unix_timestamp((parse_unix_timestamp($row_current.date_value, 'yyyy-MM-dd')::int - ($days_interval * 86400))::decimal(16,6), 'yyyy-MM-dd');
+        $expected_prev_dates := array_append($expected_prev_dates, $prev_date);
+        $current_values := array_append($current_values, $row_current.value);
+        $current_dates := array_append($current_dates, $row_current.date_value);
+    }
+
+    // example: 01-2000]
+    $earliest_prev_date := $expected_prev_dates[1];
+    // example: 09-2000
+    $latest_prev_date := $expected_prev_dates[array_length($expected_prev_dates)];
+
+    // real previous values doesn't match the same length as expected previous dates
+    // because the interval can have much more values than the expected dates
+    $real_prev_values decimal(21,3)[];
+    $real_prev_dates text[];
+
+    // now we query the prev dates
+    for $row_prev in SELECT * FROM get_index($earliest_prev_date, $latest_prev_date, $frozen_at) {
+        $real_prev_values := array_append($real_prev_values, $row_prev.value);
+        $real_prev_dates := array_append($real_prev_dates, $row_prev.date_value);
+    }
+
+    // now we calculate the matching dates for the real prev values
+    $result_prev_dates text[];
+    $result_prev_values decimal(21,3)[];
+
+    $real_prev_date_idx int := 1;
+
+    // for each expected prev date, we find the matching real prev date
+    if array_length($expected_prev_dates) > 0 {
+        for $expected_prev_date_idx in 1..array_length($expected_prev_dates) {
+            // we start from the last index of real prev dates. we don't need to check previous values
+            for $selector in $real_prev_date_idx..array_length($real_prev_dates) {
+                // if next real prev date is greater than expected prev date (or null), then we need to use the current real value
+                if $real_prev_dates[$selector + 1] > $expected_prev_dates[$expected_prev_date_idx] OR $real_prev_dates[$selector + 1] IS NULL {
+                    $result_prev_dates := array_append($result_prev_dates, $real_prev_dates[$selector]);
+                    $result_prev_values := array_append($result_prev_values, $real_prev_values[$selector]);
+                    // we already appended one for current $real_prev_date_idx, then we need to go to next
+                    $real_prev_date_idx := $selector;
+                    break;
+                }
+            }
+        }
+    }
+
+    // check if we have the same number of values and dates
+    if array_length($current_dates) != array_length($result_prev_dates) {
+        error('we have different number of dates and values');
+    }
+    if array_length($current_values) != array_length($result_prev_values) {
+        error('we have different number of dates and values');
+    }
+
+    // calculate the index change
+    if array_length($result_prev_dates) > 0 {
+        for $row_result in 1..array_length($result_prev_dates) {
+            if $result_prev_values[$row_result] != 0::decimal(21,3) {
+                return next $current_dates[$row_result], ($current_values[$row_result] - $result_prev_values[$row_result]) * 100.00::decimal(21,3) / $result_prev_values[$row_result];
             }
         }
     }
 }
+
 
 // # Helper functions
 
