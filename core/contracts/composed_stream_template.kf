@@ -343,7 +343,7 @@ procedure get_record($date_from text, $date_to text, $frozen_at int) public view
         if $in_range == false {
             if $row.date_value >= $date_from {
                 $in_range := true;
-                if $last_date is distinct from null {
+                if ($last_date is distinct from null) AND $row.date_value != $date_from {
                     return next $last_date, $last_value;
                 }
             }
@@ -384,7 +384,7 @@ procedure get_index($date_from text, $date_to text, $frozen_at int) public view 
         if $in_range == false {
             if $row.date_value >= $date_from {
                 $in_range := true;
-                if $last_date is distinct from null {
+                if ($last_date is distinct from null) AND $row.date_value != $date_from {
                     return next $last_date, $last_value;
                 }
             }
