@@ -169,6 +169,7 @@ func (s *Stream) GetIndex(ctx context.Context, input types.GetIndexInput) ([]typ
 	args = append(args, transformOrNil(input.DateFrom, func(date civil.Date) any { return date.String() }))
 	args = append(args, transformOrNil(input.DateTo, func(date civil.Date) any { return date.String() }))
 	args = append(args, transformOrNil(input.FrozenAt, func(date time.Time) any { return date.UTC().Format(time.RFC3339) }))
+	args = append(args, transformOrNil(input.BaseDate, func(date civil.Date) any { return date.String() }))
 
 	results, err := s.call(ctx, "get_index", args)
 	if err != nil {

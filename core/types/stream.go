@@ -13,6 +13,7 @@ type GetRecordInput struct {
 	DateFrom *civil.Date
 	DateTo   *civil.Date
 	FrozenAt *time.Time
+	BaseDate *civil.Date
 }
 
 type GetIndexInput = GetRecordInput
