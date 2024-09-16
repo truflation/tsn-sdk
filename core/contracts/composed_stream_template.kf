@@ -31,7 +31,12 @@ table metadata {
     #created_idx    index(created_at) // faster sorting
 }
 
-foreign procedure ext_get_data($date_from text, $date_to text, $frozen_at int) returns table(
+foreign procedure ext_get_record($date_from text, $date_to text, $frozen_at int) returns table(
+    date_value text,
+    value decimal(21,3)
+)
+
+foreign procedure ext_get_index($date_from text, $date_to text, $frozen_at int, $base_date text) returns table(
     date_value text,
     value decimal(21,3)
 )
@@ -97,7 +102,7 @@ procedure get_raw_record(
         // arrays are 1-indexed, so we match that
         for $taxonomy_index in 1..array_length($child_data_providers) {
             $dbid text := get_dbid($child_data_providers[$taxonomy_index], $child_stream_ids[$taxonomy_index]);
-            for $row3 in SELECT * FROM ext_get_data[$dbid, 'get_record']($date_from, $date_to, $frozen_at) {
+            for $row3 in SELECT * FROM ext_get_record[$dbid, 'get_record']($date_from, $date_to, $frozen_at) {
                 return next $row3.date_value, $row3.value, $taxonomy_index;
             }
         }
@@ -116,7 +121,8 @@ procedure get_raw_index(
     $date_to text,
     $frozen_at int,
     $child_data_providers text[],
-    $child_stream_ids text[]
+    $child_stream_ids text[],
+    $base_date text
 ) private view returns table(
     date_value text,
     value decimal(21,3),
@@ -138,7 +144,7 @@ procedure get_raw_index(
         // arrays are 1-indexed, so we match that
         for $taxonomy_index in 1..array_length($child_data_providers) {
             $dbid text := get_dbid($child_data_providers[$taxonomy_index], $child_stream_ids[$taxonomy_index]);
-            for $row in SELECT * FROM ext_get_data[$dbid, 'get_index']($date_from, $date_to, $frozen_at) {
+            for $row in SELECT * FROM ext_get_index[$dbid, 'get_index']($date_from, $date_to, $frozen_at, $base_date) {
                 return next $row.date_value, $row.value, $taxonomy_index;
             }
         }
@@ -237,7 +243,7 @@ procedure get_record_filled($date_from text, $date_to text, $frozen_at int) priv
 // get_index_filled retrieves the filled index for a specified date range
 // and fills the gaps with the last known value for each taxonomy
 // if the last known value is not available, it will not emit the index, making it a sparse table
-procedure get_index_filled($date_from text, $date_to text, $frozen_at int) private view returns table(
+procedure get_index_filled($date_from text, $date_to text, $frozen_at int, $base_date text) private view returns table(
     date_value text,
     value_with_weight decimal(21,3), // value * weight
     // we also return the weight, so we can calculate the total weight for a date
@@ -273,7 +279,7 @@ procedure get_index_filled($date_from text, $date_to text, $frozen_at int) priva
    // - better manipulation of tables as objects, then we could modify a table to
    //   fill forward without needing to return immediately on each loop
 
-    for $row_raw in SELECT * FROM get_raw_index($date_from, $date_to, $frozen_at, $child_data_providers, $child_stream_id) ORDER BY date_value, taxonomy_index {
+    for $row_raw in SELECT * FROM get_raw_index($date_from, $date_to, $frozen_at, $child_data_providers, $child_stream_id, $base_date) ORDER BY date_value, taxonomy_index {
         $current_date := $row_raw.date_value;
 
         // Emit filled values for previous date if date has changed
@@ -366,7 +372,7 @@ procedure get_record($date_from text, $date_to text, $frozen_at int) public view
 
 // get_index retrieves the index for a specified date range as expected from the stream interface
 // i.e. with filled gaps
-procedure get_index($date_from text, $date_to text, $frozen_at int) public view returns table(
+procedure get_index($date_from text, $date_to text, $frozen_at int, $base_date text) public view returns table(
     date_value text,
     value decimal(21,3)
 ) {
@@ -379,7 +385,7 @@ procedure get_index($date_from text, $date_to text, $frozen_at int) public view 
             date_value,
             SUM(value_with_weight)::decimal(21,3) AS total_value_with_weight,
             SUM(weight)::decimal(21,3) AS total_weight
-        FROM get_index_filled($date_from, $date_to, $frozen_at) group by date_value) as r {
+        FROM get_index_filled($date_from, $date_to, $frozen_at, $base_date) group by date_value) as r {
         // when we arrive in the range, we start emitting. If there was a previous value, we emit it
         if $in_range == false {
             if $row.date_value >= $date_from {
@@ -821,7 +827,7 @@ procedure is_stream_allowed_to_compose() public view returns (value bool) {
 }
 
 
-procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days_interval int) public view returns table(
+procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days_interval int, $base_date text) public view returns table(
     date_value text,
     value decimal(21,3)
 ) {
@@ -877,7 +883,7 @@ procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days
     // example: [01-2000, 05-2000, 09-2000, 10-2000]
     $expected_prev_dates text[];
 
-    for $row_current in SELECT * FROM get_index($date_from, $date_to, $frozen_at) {
+    for $row_current in SELECT * FROM get_index($date_from, $date_to, $frozen_at, $base_date) {
         $prev_date := format_unix_timestamp((parse_unix_timestamp($row_current.date_value, 'yyyy-MM-dd')::int - ($days_interval * 86400))::decimal(16,6), 'yyyy-MM-dd');
         $expected_prev_dates := array_append($expected_prev_dates, $prev_date);
         $current_values := array_append($current_values, $row_current.value);
@@ -895,7 +901,7 @@ procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days
     $real_prev_dates text[];
 
     // now we query the prev dates
-    for $row_prev in SELECT * FROM get_index($earliest_prev_date, $latest_prev_date, $frozen_at) {
+    for $row_prev in SELECT * FROM get_index($earliest_prev_date, $latest_prev_date, $frozen_at, $base_date) {
         $real_prev_values := array_append($real_prev_values, $row_prev.value);
         $real_prev_dates := array_append($real_prev_dates, $row_prev.date_value);
     }
@@ -913,8 +919,15 @@ procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days
             for $selector in $real_prev_date_idx..array_length($real_prev_dates) {
                 // if next real prev date is greater than expected prev date (or null), then we need to use the current real value
                 if $real_prev_dates[$selector + 1] > $expected_prev_dates[$expected_prev_date_idx] OR $real_prev_dates[$selector + 1] IS NULL {
+                    // if the current real prev date is already greater than expected prev date
+                    // we use NULL. We're probably before the first real prev date here
+                    if $real_prev_dates[$selector] > $expected_prev_dates[$expected_prev_date_idx] {
+                        $result_prev_dates := array_append($result_prev_dates, null::text);
+                        $result_prev_values := array_append($result_prev_values, null::decimal(21,3));
+                    } else {
                     $result_prev_dates := array_append($result_prev_dates, $real_prev_dates[$selector]);
                     $result_prev_values := array_append($result_prev_values, $real_prev_values[$selector]);
+                    }
                     // we already appended one for current $real_prev_date_idx, then we need to go to next
                     $real_prev_date_idx := $selector;
                     break;
@@ -934,7 +947,8 @@ procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days
     // calculate the index change
     if array_length($result_prev_dates) > 0 {
         for $row_result in 1..array_length($result_prev_dates) {
-            if $result_prev_values[$row_result] != 0::decimal(21,3) {
+            // if the expected_prev_date is null, then we don't have a real prev date
+            if $result_prev_dates[$row_result] IS DISTINCT FROM NULL {
                 return next $current_dates[$row_result], ($current_values[$row_result] - $result_prev_values[$row_result]) * 100.00::decimal(21,3) / $result_prev_values[$row_result];
             }
         }
