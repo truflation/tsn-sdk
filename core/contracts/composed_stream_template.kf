@@ -827,7 +827,7 @@ procedure is_stream_allowed_to_compose() public view returns (value bool) {
 }
 
 
-procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days_interval int, $base_date text) public view returns table(
+procedure get_index_change($date_from text, $date_to text, $frozen_at int, $base_date text, $days_interval int) public view returns table(
     date_value text,
     value decimal(21,3)
 ) {

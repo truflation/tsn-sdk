@@ -316,9 +316,6 @@ procedure get_index($date_from text, $date_to text, $frozen_at int, $base_date t
         date_value text,
         value decimal(21,3)
         ) {
-    if $base_date IS NULL OR $base_date == '' {
-        $base_date := '2010-01-01';
-    }
 
     $baseValue decimal(21,3) := get_base_value($base_date);
     if $baseValue == 0::decimal(21,3) {
@@ -330,6 +327,12 @@ procedure get_index($date_from text, $date_to text, $frozen_at int, $base_date t
 
 // get_base_value returns the first value of the primitive stream after the given date
 procedure get_base_value($base_date text) private view returns (value decimal(21,3)) {
+    // let's coalesce null with ''
+    // then, if it's empty, it will always be the first value
+    if $base_date is null {
+        $base_date := '';
+    }
+
     for $row in SELECT value from primitive_events
     WHERE date_value >= $base_date
     ORDER BY date_value ASC, created_at DESC LIMIT 1 {
@@ -537,7 +540,7 @@ procedure is_stream_allowed_to_compose() public view returns (value bool) {
     error('stream not allowed to compose');
 }
 
-procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days_interval int, $base_date text) public view returns table(
+procedure get_index_change($date_from text, $date_to text, $frozen_at int, $base_date text, $days_interval int) public view returns table(
     date_value text,
     value decimal(21,3)
 ) {
@@ -634,8 +637,8 @@ procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days
                         $result_prev_dates := array_append($result_prev_dates, null::text);
                         $result_prev_values := array_append($result_prev_values, null::decimal(21,3));
                     } else {
-                        $result_prev_dates := array_append($result_prev_dates, $real_prev_dates[$selector]);
-                        $result_prev_values := array_append($result_prev_values, $real_prev_values[$selector]);
+                    $result_prev_dates := array_append($result_prev_dates, $real_prev_dates[$selector]);
+                    $result_prev_values := array_append($result_prev_values, $real_prev_values[$selector]);
                     }
                     // we already appended one for current $real_prev_date_idx, then we need to go to next
                     $real_prev_date_idx := $selector;
