@@ -316,9 +316,6 @@ procedure get_index($date_from text, $date_to text, $frozen_at int, $base_date t
         date_value text,
         value decimal(21,3)
         ) {
-    if $base_date IS NULL OR $base_date == '' {
-        $base_date := '2010-01-01';
-    }
 
     $baseValue decimal(21,3) := get_base_value($base_date);
     if $baseValue == 0::decimal(21,3) {
@@ -330,6 +327,12 @@ procedure get_index($date_from text, $date_to text, $frozen_at int, $base_date t
 
 // get_base_value returns the first value of the primitive stream after the given date
 procedure get_base_value($base_date text) private view returns (value decimal(21,3)) {
+    // let's coalesce null with ''
+    // then, if it's empty, it will always be the first value
+    if $base_date is null {
+        $base_date := '';
+    }
+
     for $row in SELECT value from primitive_events
     WHERE date_value >= $base_date
     ORDER BY date_value ASC, created_at DESC LIMIT 1 {
@@ -392,19 +395,29 @@ procedure get_original_record(
         if $date_to IS DISTINCT FROM NULL {
             // date_from and date_to are provided
             // we will fetch all records from date_from to date_to
-            return SELECT date_value, value FROM primitive_events
+           for $row in SELECT date_value, value FROM primitive_events
                 WHERE date_value >= $date_from AND date_value <= $date_to
                 AND (created_at <= $frozenValue OR $frozenValue = 0)
                 AND $last_result_date != date_value
-                ORDER BY date_value DESC, created_at DESC;
+               ORDER BY date_value DESC, created_at DESC {
+                   if $last_result_date != $row.date_value {
+                        $last_result_date := $row.date_value;
+                       return next $row.date_value, $row.value;
+                   }
+               }
         } else {
             // only date_from is provided
             // we will fetch all records from date_from to the latest
-            return SELECT date_value, value FROM primitive_events
+           for $row2 in SELECT date_value, value FROM primitive_events
                 WHERE date_value >= $date_from
                 AND (created_at <= $frozenValue OR $frozenValue = 0)
                 AND $last_result_date != date_value
-                ORDER BY date_value DESC, created_at DESC;
+               ORDER BY date_value DESC, created_at DESC {
+                   if $last_result_date != $row2.date_value {
+                        $last_result_date := $row2.date_value;
+                       return next $row2.date_value, $row2.value;
+                   }
+               }
         }
     } else {
         if $date_to IS NOT DISTINCT FROM NULL {
@@ -537,7 +550,7 @@ procedure is_stream_allowed_to_compose() public view returns (value bool) {
     error('stream not allowed to compose');
 }
 
-procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days_interval int, $base_date text) public view returns table(
+procedure get_index_change($date_from text, $date_to text, $frozen_at int, $base_date text, $days_interval int) public view returns table(
     date_value text,
     value decimal(21,3)
 ) {
@@ -634,8 +647,8 @@ procedure get_index_change($date_from text, $date_to text, $frozen_at int, $days
                         $result_prev_dates := array_append($result_prev_dates, null::text);
                         $result_prev_values := array_append($result_prev_values, null::decimal(21,3));
                     } else {
-                        $result_prev_dates := array_append($result_prev_dates, $real_prev_dates[$selector]);
-                        $result_prev_values := array_append($result_prev_values, $real_prev_values[$selector]);
+                    $result_prev_dates := array_append($result_prev_dates, $real_prev_dates[$selector]);
+                    $result_prev_values := array_append($result_prev_values, $real_prev_values[$selector]);
                     }
                     // we already appended one for current $real_prev_date_idx, then we need to go to next
                     $real_prev_date_idx := $selector;
