@@ -135,8 +135,8 @@ func TestComposedStream(t *testing.T) {
 		// (v1 * w1 + v2 * w2 ) / (w1 + w2)
 		// ( 1 *  1 +  3 *  2 ) / ( 1 +  2) = 7 / 3 = 2.333
 		// ( 2 *  1 +  4 *  2 ) / ( 1 +  2) = 10 / 3 = 3.333
-		checkRecord(records[0], 2.333)
-		checkRecord(records[1], 3.333)
+		checkRecord(records[0], 2.3333333333333335)
+		checkRecord(records[1], 3.3333333333333335)
 
 		// Step 6: Query the composed stream for index
 		// Query the index within a specific date range
@@ -148,6 +148,6 @@ func TestComposedStream(t *testing.T) {
 		assertNoErrorOrFail(t, err, "Failed to get index")
 		assert.Equal(t, 2, len(index))
 		checkRecord(index[0], 100)
-		checkRecord(index[1], 155.556)
+		checkRecord(index[1], 155.55555555555554)
 	})
 }

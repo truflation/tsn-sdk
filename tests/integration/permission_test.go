@@ -60,7 +60,7 @@ func TestPermissions(t *testing.T) {
 	// Helper function to check if retrieved records match expected values
 	var checkRecords = func(t *testing.T, rec []types.StreamRecord) {
 		assert.Equal(t, 1, len(rec))
-		assert.Equal(t, "1.000", rec[0].Value.String())
+		assert.Equal(t, "1.000000000000000000", rec[0].Value.String())
 		assert.Equal(t, civil.Date{Year: 2020, Month: 1, Day: 1}, rec[0].DateValue)
 	}
 
