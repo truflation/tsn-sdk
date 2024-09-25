@@ -83,7 +83,7 @@ func TestPrimitiveStream(t *testing.T) {
 		// Verify the record's content
 		// This ensures that the inserted data matches what we expect
 		assert.Len(t, records, 1, "Expected exactly one record")
-		assert.Equal(t, "1.000", records[0].Value.String(), "Unexpected record value")
+		assert.Equal(t, "1.000000000000000000", records[0].Value.String(), "Unexpected record value")
 		assert.Equal(t, "2020-01-01", records[0].DateValue.String(), "Unexpected record date")
 
 		// Query index from the stream
@@ -96,7 +96,7 @@ func TestPrimitiveStream(t *testing.T) {
 		// Verify the index's content
 		// This ensures that the inserted data matches what we expect
 		assert.Len(t, index, 1, "Expected exactly one index")
-		assert.Equal(t, "100.000", index[0].Value.String(), "Unexpected index value")
+		assert.Equal(t, "100.000000000000000000", index[0].Value.String(), "Unexpected index value")
 		assert.Equal(t, "2020-01-01", index[0].DateValue.String(), "Unexpected index date")
 	})
 }
