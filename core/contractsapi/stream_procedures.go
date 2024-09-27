@@ -2,6 +2,7 @@ package contractsapi
 
 import (
 	"context"
+	"fmt"
 	"github.com/cockroachdb/apd/v3"
 	"github.com/golang-sql/civil"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
@@ -198,4 +199,40 @@ func (s *Stream) GetIndex(ctx context.Context, input types.GetIndexInput) ([]typ
 	}
 
 	return outputs, nil
+}
+
+// GetFirstRecord(ctx context.Context, input GetFirstRecordInput) (*StreamRecord, error)
+func (s *Stream) GetFirstRecord(ctx context.Context, input types.GetFirstRecordInput) (*types.StreamRecord, error) {
+	var args []any
+	args = append(args, transformOrNil(input.AfterDate, func(date civil.Date) any { return date.String() }))
+	args = append(args, transformOrNil(input.FrozenAt, func(date time.Time) any { return date.UTC().Format(time.RFC3339) }))
+
+	results, err := s.call(ctx, "get_first_record", args)
+	if err != nil {
+		return nil, err
+	}
+
+	rawOutputs, err := DecodeCallResult[GetRecordRawOutput](results)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rawOutputs) == 0 {
+		return nil, fmt.Errorf(ErrorRecordNotFound)
+	}
+
+	rawOutput := rawOutputs[0]
+	value, _, err := apd.NewFromString(rawOutput.Value)
+	if err != nil {
+		return nil, err
+	}
+	dateValue, err := civil.ParseDate(rawOutput.DateValue)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.StreamRecord{
+		DateValue: dateValue,
+		Value:     *value,
+	}, nil
 }

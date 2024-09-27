@@ -149,5 +149,12 @@ func TestComposedStream(t *testing.T) {
 		assert.Equal(t, 2, len(index))
 		checkRecord(index[0], 100)
 		checkRecord(index[1], 155.55555555555554)
+
+		// Step 7: Query the first record from the composed stream
+		// Query the first record from the composed stream
+		firstRecord, err := deployedComposedStream.GetFirstRecord(ctx, types.GetFirstRecordInput{})
+		assertNoErrorOrFail(t, err, "Failed to get first record")
+		checkRecord(*firstRecord, 2.3333333333333335)
+		assert.Equal(t, "2020-01-01", firstRecord.DateValue.String())
 	})
 }

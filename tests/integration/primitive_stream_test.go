@@ -98,5 +98,14 @@ func TestPrimitiveStream(t *testing.T) {
 		assert.Len(t, index, 1, "Expected exactly one index")
 		assert.Equal(t, "100.000000000000000000", index[0].Value.String(), "Unexpected index value")
 		assert.Equal(t, "2020-01-01", index[0].DateValue.String(), "Unexpected index date")
+
+		// Query the first record from the stream
+		firstRecord, err := deployedPrimitiveStream.GetFirstRecord(ctx, types.GetFirstRecordInput{})
+		assertNoErrorOrFail(t, err, "Failed to query first record")
+
+		// Verify the first record's content
+		// This ensures that the inserted data matches what we expect
+		assert.Equal(t, "1.000000000000000000", firstRecord.Value.String(), "Unexpected first record value")
+		assert.Equal(t, "2020-01-01", firstRecord.DateValue.String(), "Unexpected first record date")
 	})
 }

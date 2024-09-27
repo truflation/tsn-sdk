@@ -18,6 +18,11 @@ type GetRecordInput struct {
 
 type GetIndexInput = GetRecordInput
 
+type GetFirstRecordInput struct {
+	AfterDate *civil.Date
+	FrozenAt  *time.Time
+}
+
 type StreamRecord struct {
 	DateValue civil.Date
 	Value     apd.Decimal
@@ -34,6 +39,8 @@ type IStream interface {
 	GetIndex(ctx context.Context, input GetIndexInput) ([]StreamIndex, error)
 	// GetType gets the type of the stream -- Primitive or Composed
 	GetType(ctx context.Context) (StreamType, error)
+	// GetFirstRecord gets the first record of the stream
+	GetFirstRecord(ctx context.Context, input GetFirstRecordInput) (*StreamRecord, error)
 
 	// SetReadVisibility sets the read visibility of the stream -- Private or Public
 	SetReadVisibility(ctx context.Context, visibility util.VisibilityEnum) (transactions.TxHash, error)

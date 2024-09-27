@@ -323,7 +323,7 @@ procedure get_index($date_from text, $date_to text, $frozen_at int, $base_date t
         value decimal(36,18)
         ) {
 
-    $baseValue decimal(36,18) := get_base_value($base_date);
+    $baseValue decimal(36,18) := get_base_value($base_date, $frozen_at);
     if $baseValue == 0::decimal(36,18) {
         error('base value is 0');
     }
@@ -332,21 +332,39 @@ procedure get_index($date_from text, $date_to text, $frozen_at int, $base_date t
 }
 
 // get_base_value returns the first value of the primitive stream after the given date
-procedure get_base_value($base_date text) private view returns (value decimal(36,18)) {
-    // let's coalesce null with ''
-    // then, if it's empty, it will always be the first value
-    if $base_date is null {
-        $base_date := '';
-    }
-
-    for $row in SELECT value from primitive_events
-    WHERE date_value >= $base_date
-    ORDER BY date_value ASC, created_at DESC LIMIT 1 {
+procedure get_base_value($base_date text, $frozen_at int) private view returns (value decimal(36,18)) {
+    for $row in SELECT * FROM get_first_record($base_date, $frozen_at) {
         return $row.value;
     }
 
-    // if no iterations, then there is no base value
     error('no base value found');
+}
+
+// get_first_record returns the first record of the primitive stream (optionally after a given date - inclusive)
+procedure get_first_record($after_date text, $frozen_at int) public view returns table(
+    date_value text,
+    value decimal(36,18)
+) {
+    // check read access
+    if is_wallet_allowed_to_read(@caller) == false {
+        error('wallet not allowed to read');
+    }
+
+    // check compose access
+    is_stream_allowed_to_compose(@foreign_caller);
+
+    // let's coalesce after_date with ''
+    // then, if it's empty, it will always be the first value
+    if $after_date is null {
+        $after_date := '';
+    }
+
+    // coalesce frozen_at with 0
+    if $frozen_at is null {
+        $frozen_at := 0;
+    }
+
+    return SELECT date_value, value FROM primitive_events WHERE date_value >= $after_date AND (created_at <= $frozen_at OR $frozen_at = 0) ORDER BY date_value ASC, created_at DESC LIMIT 1;
 }
 
 // get_original_record returns the original value of the primitive stream for a given date

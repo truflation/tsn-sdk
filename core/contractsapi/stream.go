@@ -37,6 +37,7 @@ type NewStreamOptions struct {
 const (
 	ErrorStreamNotFound = "stream not found"
 	ErrorDatasetExists  = "dataset exists"
+	ErrorRecordNotFound = "record not found"
 )
 
 // NewStream creates a new stream, it is straightforward and only requires the stream id and the deployer
