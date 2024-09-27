@@ -41,6 +41,11 @@ foreign procedure ext_get_index($date_from text, $date_to text, $frozen_at int, 
     value decimal(36,18)
 )
 
+foreign procedure ext_get_first_record($after_date text, $frozen_at int) returns table(
+    date_value text,
+    value decimal(36,18)
+)
+
 procedure stream_exists($data_provider text, $stream_id text) public view returns (result bool) {
     $dbid text := get_dbid($data_provider, $stream_id);
 
@@ -409,6 +414,47 @@ procedure get_index($date_from text, $date_to text, $frozen_at int, $base_date t
         return next $last_date, $last_value;
     }
 
+}
+
+// get_first_record returns the first record of the composed stream (optionally after a given date)
+// Note: this operation performs 2 loop queries through the taxonomies (O(2n)).
+// Couldn't optimize to do once because there are edge cases when after_date is provided
+// and the first record is before that date.
+procedure get_first_record($after_date text, $frozen_at int) public view returns table(
+    date_value text,
+    value decimal(36,18)
+) {
+    // check read access
+    if is_wallet_allowed_to_read(@caller) == false {
+        error('wallet not allowed to read');
+    }
+
+    // check compose access
+    is_stream_allowed_to_compose(@foreign_caller);
+
+    // let's coalesce null with ''
+    // then, if it's empty, it will always be the first value
+    if $after_date is null {
+        $after_date := '';
+    }
+
+    // 1. figure the earliest date possible after the after_date
+   $earliest_date text := '';
+   for $taxonomy_row in SELECT * FROM describe_taxonomies(true) {
+        $dbid := get_dbid($taxonomy_row.child_data_provider, $taxonomy_row.child_stream_id);
+        for $record_row in SELECT * FROM ext_get_first_record[$dbid, 'get_first_record']($after_date, $frozen_at) {
+            if $earliest_date == '' OR $record_row.date_value < $earliest_date {
+                $earliest_date := $record_row.date_value;
+            }
+        }
+   }
+
+   // 2. get_record with the earliest date if it exists
+   if $earliest_date != '' {
+       for $row in SELECT date_value, value FROM get_record($earliest_date, $earliest_date, $frozen_at) {
+            return next $row.date_value, $row.value;
+       }
+   }
 }
 
 procedure is_initiated() private view returns (result bool) {

@@ -1,0 +1,91 @@
+name: "Semantic Pull Requests"
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+permissions:
+  pull-requests: write
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    # Job steps
+    steps:
+      - name: Lint Pull Requests name
+        uses: amannn/action-semantic-pull-request@v5
+        id: lint_pr_title
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            fix
+            feat
+            ci
+            chore
+            build
+            test
+            docs
+      - uses: marocchino/sticky-pull-request-comment@v2
+        # When the previous steps fails, the workflow would stop. By adding this
+        # condition you can continue the execution with the populated error message.
+        if: always() && (steps.lint_pr_title.outputs.error_message != null)
+        with:
+          header: pr-title-lint-error
+          message: |
+            Hey there! 👋🏼
+
+            We require pull request titles to follow [Truflation's Developer Guideline](https://github.com/truflation/developers) and it looks like your proposed title needs to be adjusted.
+
+            Details:
+
+            ```
+            ${{ steps.lint_pr_title.outputs.error_message }}
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Delete a previous comment when the issue has been resolved
+      - if: ${{ steps.lint_pr_title.outputs.error_message == null }}
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-title-lint-error
+          delete: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Add new step here
+      - uses: georgeciubotaru/action-pr-title@master
+        id: pr_title_length
+        with:
+          min_length: 10
+          max_length: 65
+      - uses: marocchino/sticky-pull-request-comment@v2
+        # When the previous steps fails, the workflow would stop. By adding this
+        # condition you can continue the execution with the populated error message.
+        if: always() && (steps.pr_title_length.outputs.error_message != null)
+        with:
+          header: pr-title-length-error
+          message: |
+            ```
+            Hey there! 👋🏼
+
+            We require pull request titles to follow the max length convention and it looks like your proposed title needs to be adjusted.
+
+            Details:
+
+            ${{ steps.pr_title_length.outputs.error_message }}
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Delete a previous comment when the issue has been resolved
+      - if: ${{ steps.pr_title_length.outputs.error_message == null }}
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-title-length-error
+          delete: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
