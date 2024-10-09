@@ -9,6 +9,7 @@ import (
 	"github.com/truflation/tsn-sdk/core/types"
 	"github.com/truflation/tsn-sdk/core/util"
 	"testing"
+	"time"
 )
 
 // This file contains integration tests for composed streams in the Truflation Stream Network (TSN).
@@ -93,7 +94,8 @@ func TestComposedStream(t *testing.T) {
 					StreamId:     childAStreamId,
 					DataProvider: signerAddress,
 				},
-				Weight: 1,
+				Weight:    1,
+				StartDate: time.Date(2020, 1, 30, 0, 0, 0, 0, time.UTC).Format(time.DateOnly),
 			},
 			{
 				ChildStream: types.StreamLocator{
@@ -112,6 +114,8 @@ func TestComposedStream(t *testing.T) {
 		})
 		assertNoErrorOrFail(t, err, "Failed to describe taxonomies")
 		assert.Equal(t, 2, len(taxonomies))
+		assert.Equal(t, time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.DateOnly), taxonomies[0].StartDate) // should be default value because it was not set
+		assert.Equal(t, time.Date(2020, 1, 30, 0, 0, 0, 0, time.UTC).Format(time.DateOnly), taxonomies[1].StartDate)
 
 		// Step 5: Query the composed stream for records
 		// Query records within a specific date range

@@ -10,6 +10,7 @@ import (
 type TaxonomyItem struct {
 	ChildStream StreamLocator
 	Weight      float64
+	StartDate   string
 }
 
 type DescribeTaxonomiesParams struct {

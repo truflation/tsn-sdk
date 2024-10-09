@@ -75,6 +75,7 @@ type DescribeTaxonomiesResult struct {
 	Weight    string `json:"weight"`
 	CreatedAt int    `json:"created_at"`
 	Version   int    `json:"version"`
+	StartDate string `json:"start_date"`
 }
 
 func (c *ComposedStream) DescribeTaxonomies(ctx context.Context, params types.DescribeTaxonomiesParams) ([]types.TaxonomyItem, error) {
@@ -105,7 +106,8 @@ func (c *ComposedStream) DescribeTaxonomies(ctx context.Context, params types.De
 				StreamId:     r.ChildStreamId,
 				DataProvider: dpAddress,
 			},
-			Weight: weight,
+			Weight:    weight,
+			StartDate: r.StartDate,
 		})
 	}
 
@@ -117,6 +119,7 @@ func (c *ComposedStream) SetTaxonomy(ctx context.Context, taxonomies []types.Tax
 		dataProviders []string
 		streamIDs     util.StreamIdSlice
 		weights       []string
+		startDates    []string
 	)
 
 	for _, taxonomy := range taxonomies {
@@ -126,10 +129,11 @@ func (c *ComposedStream) SetTaxonomy(ctx context.Context, taxonomies []types.Tax
 		dataProviders = append(dataProviders, fmt.Sprintf("%s", dataProviderHex))
 		streamIDs = append(streamIDs, taxonomy.ChildStream.StreamId)
 		weights = append(weights, fmt.Sprintf("%f", taxonomy.Weight))
+		startDates = append(startDates, taxonomy.StartDate)
 	}
 
 	var args [][]any
 
-	args = append(args, []any{dataProviders, streamIDs.Strings(), weights})
+	args = append(args, []any{dataProviders, streamIDs.Strings(), weights, startDates})
 	return c.checkedExecute(ctx, "set_taxonomy", args)
 }
