@@ -3,6 +3,7 @@ package contractsapi
 import (
 	"context"
 	"fmt"
+	"github.com/golang-sql/civil"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/truflation/tsn-sdk/core/types"
 	"github.com/truflation/tsn-sdk/core/util"
@@ -72,68 +73,71 @@ type DescribeTaxonomiesResult struct {
 	ChildDataProvider string        `json:"child_data_provider"`
 	// decimals are received as strings by kwil to avoid precision loss
 	// as decimal are more arbitrary than golang's float64
-	Weight    string `json:"weight"`
-	CreatedAt int    `json:"created_at"`
-	Version   int    `json:"version"`
-	StartDate string `json:"start_date"`
+	Weight    string      `json:"weight"`
+	CreatedAt int         `json:"created_at"`
+	Version   int         `json:"version"`
+	StartDate *civil.Date `json:"start_date"`
 }
 
-func (c *ComposedStream) DescribeTaxonomies(ctx context.Context, params types.DescribeTaxonomiesParams) ([]types.TaxonomyItem, error) {
+func (c *ComposedStream) DescribeTaxonomies(ctx context.Context, params types.DescribeTaxonomiesParams) (types.Taxonomy, error) {
 	records, err := c.call(ctx, "describe_taxonomies", []any{params.LatestVersion})
 
 	if err != nil {
-		return nil, err
+		return types.Taxonomy{}, err
 	}
 
 	result, err := DecodeCallResult[DescribeTaxonomiesResult](records)
 	if err != nil {
-		return nil, err
+		return types.Taxonomy{}, err
 	}
 
-	var taxonomies []types.TaxonomyItem
+	var taxonomyItems []types.TaxonomyItem
 	for _, r := range result {
 		dpAddress, err := util.NewEthereumAddressFromString(r.ChildDataProvider)
 		if err != nil {
-			return nil, err
+			return types.Taxonomy{}, err
 		}
 		weight, err := strconv.ParseFloat(r.Weight, 64)
 		if err != nil {
-			return nil, err
+			return types.Taxonomy{}, err
 		}
 
-		taxonomies = append(taxonomies, types.TaxonomyItem{
+		taxonomyItems = append(taxonomyItems, types.TaxonomyItem{
 			ChildStream: types.StreamLocator{
 				StreamId:     r.ChildStreamId,
 				DataProvider: dpAddress,
 			},
-			Weight:    weight,
-			StartDate: r.StartDate,
+			Weight: weight,
 		})
 	}
 
-	return taxonomies, nil
+	return types.Taxonomy{
+		TaxonomyItems: taxonomyItems,
+		StartDate:     result[0].StartDate,
+	}, nil
 }
 
-func (c *ComposedStream) SetTaxonomy(ctx context.Context, taxonomies []types.TaxonomyItem) (transactions.TxHash, error) {
+func (c *ComposedStream) SetTaxonomy(ctx context.Context, taxonomies types.Taxonomy) (transactions.TxHash, error) {
 	var (
 		dataProviders []string
 		streamIDs     util.StreamIdSlice
 		weights       []string
-		startDates    []string
+		startDate     string // null string is not able to be encoded by kwil, so lets left it empty by default
 	)
 
-	for _, taxonomy := range taxonomies {
+	for _, taxonomy := range taxonomies.TaxonomyItems {
 		dataProviderHexString := taxonomy.ChildStream.DataProvider.Address()
 		// kwil expects no 0x prefix
 		dataProviderHex := dataProviderHexString[2:]
 		dataProviders = append(dataProviders, fmt.Sprintf("%s", dataProviderHex))
 		streamIDs = append(streamIDs, taxonomy.ChildStream.StreamId)
 		weights = append(weights, fmt.Sprintf("%f", taxonomy.Weight))
-		startDates = append(startDates, taxonomy.StartDate)
+	}
+	if taxonomies.StartDate != nil {
+		startDate = taxonomies.StartDate.String()
 	}
 
 	var args [][]any
-
-	args = append(args, []any{dataProviders, streamIDs.Strings(), weights, startDates})
+	args = append(args, []any{dataProviders, streamIDs.Strings(), weights, startDate})
 	return c.checkedExecute(ctx, "set_taxonomy", args)
 }

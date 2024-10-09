@@ -12,7 +12,7 @@ table taxonomies {
     created_at          int     notnull,    //  block height
     disabled_at         int,                //  block height
     version             int     notnull,
-    start_date          text    notnull // indicates the start date of when the taxonomy is valid. i.e. when the weight starts to be used
+    start_date          text // indicates the start date of when the taxonomy is valid. i.e. when the weight starts to be used
 }
 
 table metadata {
@@ -779,7 +779,7 @@ procedure get_current_version($show_disabled bool) private view returns (result 
 // - gets an array of values for each properties, zipping them as needed
 // - increases the version
 // - adds taxonomy records in batch
-procedure set_taxonomy($data_providers text[], $stream_ids text[], $weights decimal(36,18)[], $start_dates text[]) public {
+procedure set_taxonomy($data_providers text[], $stream_ids text[], $weights decimal(36,18)[], $start_date text) public {
     stream_owner_only();
 
     $next_version int := get_current_version(true) + 1;
@@ -795,21 +795,12 @@ procedure set_taxonomy($data_providers text[], $stream_ids text[], $weights deci
     if $length != array_length($weights) {
         error('data_providers and weights must have the same length');
     }
-    if $length != array_length($start_dates) {
-        error('data_providers and start_dates must have the same length');
-    }
 
     for $i in 1..$length {
         $current_uuid :=  uuid_generate_v5($current_uuid, @txid);
 
-        // if start_date is empty, we set it to a default value
-        $start_date_value text := '2010-01-01';
-        if $start_dates[$i] != '' {
-            $start_date_value := $start_dates[$i];
-        }
-
         INSERT INTO taxonomies (taxonomy_id, child_stream_id, child_data_provider, weight, created_at, version, start_date)
-            VALUES ($current_uuid, $stream_ids[$i], $data_providers[$i], $weights[$i], $block_height, $next_version, $start_date_value);
+            VALUES ($current_uuid, $stream_ids[$i], $data_providers[$i], $weights[$i], $block_height, $next_version, $start_date);
     }
 }
 

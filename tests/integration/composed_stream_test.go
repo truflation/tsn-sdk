@@ -88,22 +88,23 @@ func TestComposedStream(t *testing.T) {
 
 		// Step 4: Set taxonomies for the composed stream
 		// Taxonomies define the structure of the composed stream
-		txHashTaxonomies, err := deployedComposedStream.SetTaxonomy(ctx, []types.TaxonomyItem{
-			{
-				ChildStream: types.StreamLocator{
-					StreamId:     childAStreamId,
-					DataProvider: signerAddress,
+		txHashTaxonomies, err := deployedComposedStream.SetTaxonomy(ctx, types.Taxonomy{
+			TaxonomyItems: []types.TaxonomyItem{
+				{
+					ChildStream: types.StreamLocator{
+						StreamId:     childAStreamId,
+						DataProvider: signerAddress,
+					},
+					Weight: 1,
 				},
-				Weight:    1,
-				StartDate: time.Date(2020, 1, 30, 0, 0, 0, 0, time.UTC).Format(time.DateOnly),
-			},
-			{
-				ChildStream: types.StreamLocator{
-					StreamId:     childBStreamId,
-					DataProvider: signerAddress,
-				},
-				Weight: 2,
-			},
+				{
+					ChildStream: types.StreamLocator{
+						StreamId:     childBStreamId,
+						DataProvider: signerAddress,
+					},
+					Weight: 2,
+				}},
+			StartDate: unsafeParseDate("2020-01-30"),
 		})
 		assertNoErrorOrFail(t, err, "Failed to set taxonomies")
 		waitTxToBeMinedWithSuccess(t, ctx, tsnClient, txHashTaxonomies)
@@ -113,9 +114,8 @@ func TestComposedStream(t *testing.T) {
 			LatestVersion: true,
 		})
 		assertNoErrorOrFail(t, err, "Failed to describe taxonomies")
-		assert.Equal(t, 2, len(taxonomies))
-		assert.Equal(t, time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.DateOnly), taxonomies[0].StartDate) // should be default value because it was not set
-		assert.Equal(t, time.Date(2020, 1, 30, 0, 0, 0, 0, time.UTC).Format(time.DateOnly), taxonomies[1].StartDate)
+		assert.Equal(t, 2, len(taxonomies.TaxonomyItems))
+		assert.Equal(t, time.Date(2020, 1, 30, 0, 0, 0, 0, time.UTC).Format(time.DateOnly), taxonomies.StartDate.String())
 
 		// Step 5: Query the composed stream for records
 		// Query records within a specific date range

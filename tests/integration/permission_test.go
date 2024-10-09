@@ -132,12 +132,13 @@ func TestPermissions(t *testing.T) {
 		})
 
 		// Deploy a composed stream using the primitive stream as a child
-		deployTestComposedStreamWithTaxonomy(t, ctx, ownerTsnClient, composedStreamId, []types.TaxonomyItem{
-			{
-				ChildStream: primitiveStreamLocator,
-				Weight:      1,
-			},
-		})
+		deployTestComposedStreamWithTaxonomy(t, ctx, ownerTsnClient, composedStreamId, types.Taxonomy{
+			TaxonomyItems: []types.TaxonomyItem{
+				{
+					ChildStream: primitiveStreamLocator,
+					Weight:      1,
+				},
+			}})
 
 		// Load the composed stream for both owner and reader
 		ownerComposedStream, err := ownerTsnClient.LoadComposedStream(ownerTsnClient.OwnStreamLocator(composedStreamId))
