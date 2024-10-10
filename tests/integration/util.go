@@ -80,7 +80,7 @@ func deployTestComposedStreamWithTaxonomy(
 	ctx context.Context,
 	tsnClient *tsnclient.Client,
 	streamId util.StreamId,
-	taxonomies []types.TaxonomyItem,
+	taxonomies types.Taxonomy,
 ) {
 	deployTxHash, err := tsnClient.DeployStream(ctx, streamId, types.StreamTypeComposed)
 	assertNoErrorOrFail(t, err, "Failed to deploy stream")

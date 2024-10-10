@@ -4,8 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/golang-sql/civil"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 )
+
+type Taxonomy struct {
+	TaxonomyItems []TaxonomyItem
+	StartDate     *civil.Date
+}
 
 type TaxonomyItem struct {
 	ChildStream StreamLocator
@@ -21,9 +27,9 @@ type IComposedStream interface {
 	// IStream methods are also available in IPrimitiveStream
 	IStream
 	// DescribeTaxonomies returns the taxonomy of the stream
-	DescribeTaxonomies(ctx context.Context, params DescribeTaxonomiesParams) ([]TaxonomyItem, error)
+	DescribeTaxonomies(ctx context.Context, params DescribeTaxonomiesParams) (Taxonomy, error)
 	// SetTaxonomy sets the taxonomy of the stream
-	SetTaxonomy(ctx context.Context, taxonomies []TaxonomyItem) (transactions.TxHash, error)
+	SetTaxonomy(ctx context.Context, taxonomies Taxonomy) (transactions.TxHash, error)
 }
 
 // MarshalJSON Custom marshaler for TaxonomyDefinition
