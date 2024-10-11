@@ -73,10 +73,10 @@ type DescribeTaxonomiesResult struct {
 	ChildDataProvider string        `json:"child_data_provider"`
 	// decimals are received as strings by kwil to avoid precision loss
 	// as decimal are more arbitrary than golang's float64
-	Weight    string      `json:"weight"`
-	CreatedAt int         `json:"created_at"`
-	Version   int         `json:"version"`
-	StartDate *civil.Date `json:"start_date"`
+	Weight    string `json:"weight"`
+	CreatedAt int    `json:"created_at"`
+	Version   int    `json:"version"`
+	StartDate string `json:"start_date"` // cannot use *string nor *civil.Date as decoding it will cause an error
 }
 
 func (c *ComposedStream) DescribeTaxonomies(ctx context.Context, params types.DescribeTaxonomiesParams) (types.Taxonomy, error) {
@@ -111,9 +111,18 @@ func (c *ComposedStream) DescribeTaxonomies(ctx context.Context, params types.De
 		})
 	}
 
+	var startDateCivil *civil.Date
+	if len(result) > 0 && result[0].StartDate != "" {
+		parsedDate, err := civil.ParseDate(result[0].StartDate)
+		if err != nil {
+			return types.Taxonomy{}, err
+		}
+		startDateCivil = &parsedDate
+	}
+
 	return types.Taxonomy{
 		TaxonomyItems: taxonomyItems,
-		StartDate:     result[0].StartDate,
+		StartDate:     startDateCivil,
 	}, nil
 }
 
