@@ -333,21 +333,22 @@ procedure get_index($date_from text, $date_to text, $frozen_at int, $base_date t
 
 // get_base_value returns the first nearest value of the primitive stream before the given date
 procedure get_base_value($base_date text, $frozen_at int) private view returns (value decimal(36,18)) {
-    // Coalesce $base_date to '2010-01-01' if it's null or empty.
-    // A valid date is required for the queries since we perform both
-    // > and <= comparisons to fetch records within the date range.
+    // If $base_date is null or empty, return the first-ever value from the primitive stream.
+    // This ensures that when no valid $base_date is provided, we still return the earliest available data point.
     if $base_date is null OR $base_date = '' {
-        $base_date := '2010-01-01';
+        for $row in SELECT * FROM primitive_events WHERE (created_at <= $frozen_at OR $frozen_at = 0 OR $frozen_at IS NULL) ORDER BY date_value ASC, created_at DESC LIMIT 1 {
+            return $row.value;
+        }
     }
 
-    for $row in SELECT * FROM primitive_events WHERE date_value <= $base_date AND (created_at <= $frozen_at OR $frozen_at = 0 OR $frozen_at IS NULL) ORDER BY date_value DESC, created_at DESC LIMIT 1 {
-        return $row.value;
+    for $row2 in SELECT * FROM primitive_events WHERE date_value <= $base_date AND (created_at <= $frozen_at OR $frozen_at = 0 OR $frozen_at IS NULL) ORDER BY date_value DESC, created_at DESC LIMIT 1 {
+        return $row2.value;
     }
 
     // if no value is found, we find the first value after the given date
     // This will raise a red flag in the system and the data will undergo the usual process for when a new data provider is added.
-    for $row2 in SELECT * FROM primitive_events WHERE date_value > $base_date AND (created_at <= $frozen_at OR $frozen_at = 0 OR $frozen_at IS NULL) ORDER BY date_value ASC, created_at DESC LIMIT 1 {
-        return $row2.value;
+    for $row3 in SELECT * FROM primitive_events WHERE date_value > $base_date AND (created_at <= $frozen_at OR $frozen_at = 0 OR $frozen_at IS NULL) ORDER BY date_value ASC, created_at DESC LIMIT 1 {
+        return $row3.value;
     }
 
     // if no value is found, we return an error
