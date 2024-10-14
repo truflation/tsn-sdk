@@ -1,7 +1,7 @@
 # Truflation Stream Network (TSN) SDK
 
 The TSN SDK provides developers with tools to interact with the Truflation Stream Network, a decentralized platform for publishing, composing, and consuming economic data streams.
-
+ 
 ⚠ **These documentation files are a work in progress. They probably contain errors and inconsistencies. If you find some, don't hesitate to open an issue at the [GitHub repository](https://github.com/truflation/tsn-sdk).**
 
 ## Quick Start
