@@ -3,13 +3,15 @@ package contractsapi
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"time"
+
 	"github.com/cockroachdb/apd/v3"
 	"github.com/golang-sql/civil"
+	"github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/pkg/errors"
 	"github.com/truflation/tsn-sdk/core/types"
-	"reflect"
-	"time"
 )
 
 // ## View only procedures
@@ -115,6 +117,11 @@ func (s *Stream) InitializeStream(ctx context.Context) (transactions.TxHash, err
 	return s.execute(ctx, "init", nil)
 }
 
+// ExecuteProcedure is a wrapper around the execute function, just to be explicit that users can execute arbitrary procedures
+func (s *Stream) ExecuteProcedure(ctx context.Context, procedure string, args [][]any) (transactions.TxHash, error) {
+	return s.execute(ctx, procedure, args)
+}
+
 type GetRecordRawOutput struct {
 	DateValue string `json:"date_value"`
 	Value     string `json:"value"`
@@ -126,6 +133,11 @@ func transformOrNil[T any](value *T, transform func(T) any) any {
 		return nil
 	}
 	return transform(*value)
+}
+
+// CallProcedure is a wrapper around the call function, just to be explicit that users can call arbitrary procedures
+func (s *Stream) CallProcedure(ctx context.Context, procedure string, args []any) (*client.Records, error) {
+	return s.call(ctx, procedure, args)
 }
 
 func (s *Stream) GetRecord(ctx context.Context, input types.GetRecordInput) ([]types.StreamRecord, error) {
