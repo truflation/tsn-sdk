@@ -3,9 +3,9 @@ package contractsapi
 import (
 	"context"
 	"fmt"
+
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/truflation/tsn-sdk/core/types"
-	"strconv"
 )
 
 type PrimitiveStream struct {
@@ -78,7 +78,7 @@ func (p *PrimitiveStream) InsertRecords(ctx context.Context, inputs []types.Inse
 
 		args = append(args, []any{
 			dateStr,
-			strconv.Itoa(input.Value),
+			fmt.Sprintf("%f", input.Value),
 		})
 	}
 
