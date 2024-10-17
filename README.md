@@ -4,7 +4,7 @@ The TSN SDK provides developers with tools to interact with the Truflation Strea
 
 ## Support
 
-This documentation is a work in progress. If you need help, don't hesitate to [open an issue](https://github.com/truflation/tsn-sdk/issues).**
+This documentation is a work in progress. If you need help, don't hesitate to [open an issue](https://github.com/truflation/tsn-sdk/issues).
 
 ## Quick Start
 
