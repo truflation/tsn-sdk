@@ -79,11 +79,17 @@ func TestComposedStream(t *testing.T) {
 		deployTestPrimitiveStreamWithData(t, ctx, tsnClient, childAStreamId, []types.InsertRecordInput{
 			{Value: 1, DateValue: *unsafeParseDate("2020-01-01")},
 			{Value: 2, DateValue: *unsafeParseDate("2020-01-02")},
+			{Value: 3, DateValue: *unsafeParseDate("2020-01-30")},
+			{Value: 4, DateValue: *unsafeParseDate("2020-02-01")},
+			{Value: 5, DateValue: *unsafeParseDate("2020-02-02")},
 		})
 
 		deployTestPrimitiveStreamWithData(t, ctx, tsnClient, childBStreamId, []types.InsertRecordInput{
 			{Value: 3, DateValue: *unsafeParseDate("2020-01-01")},
 			{Value: 4, DateValue: *unsafeParseDate("2020-01-02")},
+			{Value: 5, DateValue: *unsafeParseDate("2020-01-30")},
+			{Value: 6, DateValue: *unsafeParseDate("2020-02-01")},
+			{Value: 7, DateValue: *unsafeParseDate("2020-02-02")},
 		})
 
 		// Step 4: Set taxonomies for the composed stream
@@ -120,13 +126,20 @@ func TestComposedStream(t *testing.T) {
 		// Step 5: Query the composed stream for records
 		// Query records within a specific date range
 		records, err := deployedComposedStream.GetRecord(ctx, types.GetRecordInput{
-			DateFrom: unsafeParseDate("2020-01-01"),
-			DateTo:   unsafeParseDate("2020-01-02"),
+			DateFrom: unsafeParseDate("2020-02-01"),
+			DateTo:   unsafeParseDate("2020-02-02"),
 		})
 
 		assertNoErrorOrFail(t, err, "Failed to get records")
-
 		assert.Equal(t, 2, len(records))
+
+		// Query the records before the set start date
+		recordsBefore, errBefore := deployedComposedStream.GetRecord(ctx, types.GetRecordInput{
+			DateFrom: unsafeParseDate("2020-01-01"),
+			DateTo:   unsafeParseDate("2020-01-02"),
+		})
+		assertNoErrorOrFail(t, errBefore, "Failed to get records before start date")
+		assert.NotNil(t, recordsBefore, "Records before start date should not be nil")
 
 		// Function to check the record values
 		var checkRecord = func(record types.StreamRecord, expectedValue float64) {
@@ -136,23 +149,32 @@ func TestComposedStream(t *testing.T) {
 		}
 
 		// Verify the record values
-		// (v1 * w1 + v2 * w2 ) / (w1 + w2)
-		// ( 1 *  1 +  3 *  2 ) / ( 1 +  2) = 7 / 3 = 2.333
-		// ( 2 *  1 +  4 *  2 ) / ( 1 +  2) = 10 / 3 = 3.333
-		checkRecord(records[0], 2.3333333333333335)
-		checkRecord(records[1], 3.3333333333333335)
+		// (( v1 * w1 ) + ( v2 * w2 )) / (w1 + w2)
+		// (( 4 *  1 ) + (  6 *  2 )) / ( 1 +  2) = 16 / 3 = 5.333
+		// (( 5 *  1 ) + (  7 *  2 )) / ( 1 +  2) = 19 / 3 = 6.333
+		checkRecord(records[0], 5.333333333333333)
+		checkRecord(records[1], 6.333333333333333)
 
 		// Step 6: Query the composed stream for index
 		// Query the index within a specific date range
 		index, err := deployedComposedStream.GetIndex(ctx, types.GetIndexInput{
-			DateFrom: unsafeParseDate("2020-01-01"),
-			DateTo:   unsafeParseDate("2020-01-02"),
+			DateFrom: unsafeParseDate("2020-01-30"),
+			DateTo:   unsafeParseDate("2020-02-01"),
+			BaseDate: unsafeParseDate("2020-01-30"),
 		})
 
 		assertNoErrorOrFail(t, err, "Failed to get index")
 		assert.Equal(t, 2, len(index))
-		checkRecord(index[0], 100)
-		checkRecord(index[1], 155.55555555555554)
+		checkRecord(index[0], 100)                // index on base date is expected to be 100
+		checkRecord(index[1], 124.44444444444444) // it is x% away from the base date + 1 in percentage
+
+		// Query the index before the set start date
+		indexBefore, errBefore := deployedComposedStream.GetIndex(ctx, types.GetIndexInput{
+			DateFrom: unsafeParseDate("2020-01-01"),
+			DateTo:   unsafeParseDate("2020-01-02"),
+		})
+		assertNoErrorOrFail(t, errBefore, "Failed to get index before start date")
+		assert.NotNil(t, indexBefore, "Index before start date should not be nil")
 
 		// Step 7: Query the first record from the composed stream
 		// Query the first record from the composed stream
