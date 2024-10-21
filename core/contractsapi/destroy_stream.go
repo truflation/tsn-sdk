@@ -2,19 +2,20 @@ package contractsapi
 
 import (
 	"context"
+
 	"github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/truflation/tsn-sdk/core/util"
+	validator "gopkg.in/validator.v2"
 )
-import "github.com/go-playground/validator/v10"
 
 type DestroyStreamInput struct {
-	StreamId   util.StreamId `validate:"required"`
-	KwilClient client.Client `validate:"required"`
+	StreamId   util.StreamId `validate:"nonnil"`
+	KwilClient client.Client `validate:"nonnil"`
 }
 
 func (i DestroyStreamInput) Validate() error {
-	return validator.New().Struct(i)
+	return validator.Validate(i)
 }
 
 type DestroyStreamOutput struct {

@@ -2,7 +2,8 @@ package tsnclient
 
 import (
 	"context"
-	"github.com/go-playground/validator/v10"
+	"time"
+
 	kwilClientPkg "github.com/kwilteam/kwil-db/core/client"
 	"github.com/kwilteam/kwil-db/core/crypto/auth"
 	"github.com/kwilteam/kwil-db/core/log"
@@ -11,13 +12,13 @@ import (
 	tsn_api "github.com/truflation/tsn-sdk/core/contractsapi"
 	clientType "github.com/truflation/tsn-sdk/core/types"
 	"github.com/truflation/tsn-sdk/core/util"
-	"time"
+	validator "gopkg.in/validator.v2"
 )
 
 type Client struct {
-	Signer      auth.Signer `validate:"required"`
+	Signer      auth.Signer `validate:"nonnil"`
 	logger      *log.Logger
-	kwilClient  *kwilClientPkg.Client `validate:"required"`
+	kwilClient  *kwilClientPkg.Client `validate:"nonnil"`
 	kwilOptions *kwilClientType.Options
 }
 
@@ -46,8 +47,7 @@ func NewClient(ctx context.Context, provider string, options ...Option) (*Client
 }
 
 func (c *Client) Validate() error {
-	validate := validator.New()
-	return validate.Struct(c)
+	return validator.Validate(c)
 }
 
 func WithSigner(signer auth.Signer) Option {

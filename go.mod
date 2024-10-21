@@ -37,6 +37,8 @@ require (
 	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
+	github.com/rezakhademix/govalidator v1.1.3 // indirect
+	github.com/rezakhademix/govalidator/v2 v2.0.9
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/supranational/blst v0.3.12 // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
@@ -48,6 +50,7 @@ require (
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
+	gopkg.in/validator.v2 v2.0.1
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
