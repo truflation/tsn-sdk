@@ -32,6 +32,8 @@ type Client interface {
 	Address() util.EthereumAddress
 	// GetAllStreams returns all streams from the TSN network
 	GetAllStreams(ctx context.Context, input GetAllStreamsInput) ([]StreamLocator, error)
+	// GetAllInitializedStreams returns all streams from the TSN network that are initialized
+	GetAllInitializedStreams(ctx context.Context, input GetAllStreamsInput) ([]StreamLocator, error)
 	// DeployComposedStreamWithTaxonomy deploys a composed stream with a taxonomy
 	DeployComposedStreamWithTaxonomy(ctx context.Context, streamId util.StreamId, taxonomy Taxonomy) error
 }
