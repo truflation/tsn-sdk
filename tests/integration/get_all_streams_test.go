@@ -66,7 +66,7 @@ func TestListAllStreams(t *testing.T) {
 	assertNoErrorOrFail(t, err, "Failed to deploy non-stream contract")
 
 	// List all streams
-	streams, err := tsnClient.GetAllStreams(ctx)
+	streams, err := tsnClient.GetAllStreams(ctx, types.GetAllStreamsInput{})
 	assertNoErrorOrFail(t, err, "Failed to list all streams")
 
 	// Check that only the primitive and composed streams are listed

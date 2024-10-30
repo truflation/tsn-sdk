@@ -31,7 +31,11 @@ type Client interface {
 	// Address of the signer used by the client
 	Address() util.EthereumAddress
 	// GetAllStreams returns all streams from the TSN network
-	GetAllStreams(ctx context.Context) ([]StreamLocator, error)
+	GetAllStreams(ctx context.Context, input GetAllStreamsInput) ([]StreamLocator, error)
 	// DeployComposedStreamWithTaxonomy deploys a composed stream with a taxonomy
 	DeployComposedStreamWithTaxonomy(ctx context.Context, streamId util.StreamId, taxonomy Taxonomy) error
+}
+
+type GetAllStreamsInput struct {
+	Owner []byte
 }

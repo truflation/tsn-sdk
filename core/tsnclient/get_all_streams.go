@@ -8,11 +8,11 @@ import (
 )
 
 // GetAllStreams returns all streams from the TSN network
-func (c *Client) GetAllStreams(ctx context.Context) ([]tsntypes.StreamLocator, error) {
+func (c *Client) GetAllStreams(ctx context.Context, input tsntypes.GetAllStreamsInput) ([]tsntypes.StreamLocator, error) {
 	kwilClient := c.GetKwilClient()
 
 	// get all deployed contracts
-	contracts, err := kwilClient.ListDatabases(ctx, nil)
+	contracts, err := kwilClient.ListDatabases(ctx, input.Owner)
 
 	if err != nil {
 		return nil, err
