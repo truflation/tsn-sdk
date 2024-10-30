@@ -66,7 +66,7 @@ func TestListAllStreams(t *testing.T) {
 	assertNoErrorOrFail(t, err, "Failed to deploy non-stream contract")
 
 	// List all streams
-	streams, err := tsnClient.GetAllStreams(ctx)
+	streams, err := tsnClient.GetAllStreams(ctx, types.GetAllStreamsInput{})
 	assertNoErrorOrFail(t, err, "Failed to list all streams")
 
 	// Check that only the primitive and composed streams are listed
@@ -83,4 +83,35 @@ func TestListAllStreams(t *testing.T) {
 
 	// Ensure all expected streams were found
 	assert.Empty(t, expectedStreamIds, "Not all expected streams were listed")
+
+	// Check non-initalized stream
+	initializedStreams, err := tsnClient.GetAllInitializedStreams(ctx, types.GetAllStreamsInput{})
+	assertNoErrorOrFail(t, err, "Failed to list all streams")
+	assert.Empty(t, initializedStreams, "It should be empty as no stream is initialized")
+
+	// initialize the stream primitiveStreamId
+	primitiveStream, err := tsnClient.LoadStream(types.StreamLocator{
+		StreamId:     primitiveStreamId,
+		DataProvider: tsnClient.Address(),
+	})
+	assertNoErrorOrFail(t, err, "Failed to load primitive stream")
+	txHash, err := primitiveStream.InitializeStream(ctx)
+	assertNoErrorOrFail(t, err, "Failed to initialize primitive stream")
+	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, txHash)
+
+	// initialize the stream composedStreamId
+	composedStream, err := tsnClient.LoadStream(types.StreamLocator{
+		StreamId:     composedStreamId,
+		DataProvider: tsnClient.Address(),
+	})
+	assertNoErrorOrFail(t, err, "Failed to load composed stream")
+
+	txHash, err = composedStream.InitializeStream(ctx)
+	assertNoErrorOrFail(t, err, "Failed to initialize composed stream")
+	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, txHash)
+
+	// Check initialized stream
+	initializedStreams, err = tsnClient.GetAllInitializedStreams(ctx, types.GetAllStreamsInput{})
+	assertNoErrorOrFail(t, err, "Failed to list all streams")
+	assert.Equal(t, 2, len(initializedStreams), "It should be 2 as 2 streams are initialized")
 }
