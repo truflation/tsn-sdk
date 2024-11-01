@@ -3,9 +3,10 @@ package tsnclient
 import (
 	"context"
 	"fmt"
+	"github.com/truflation/tsn-sdk/core/logging"
 	"github.com/truflation/tsn-sdk/core/types"
 	"github.com/truflation/tsn-sdk/core/util"
-	"log"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -35,7 +36,7 @@ func (c *Client) DeployComposedStreamWithTaxonomy(ctx context.Context, streamId 
 	if err != nil {
 		return err
 	}
-	log.Printf("Deployed stream %s, with txHash %s\n", streamId.String(), txHashCreate.Hex())
+	logging.Logger.Info("Deployed stream, with txHash", zap.String("streamId", streamId.String()), zap.String("txHash", txHashCreate.Hex()))
 
 	// load the stream
 	streamLocator := c.OwnStreamLocator(streamId)
@@ -54,7 +55,7 @@ func (c *Client) DeployComposedStreamWithTaxonomy(ctx context.Context, streamId 
 	if err != nil {
 		return err
 	}
-	log.Printf("Initialized stream %s, with txHash %s\n", streamId.String(), txHashInit.Hex())
+	logging.Logger.Info("Initialized stream", zap.String("streamId", streamId.String()), zap.String("txHash", txHashInit.Hex()))
 
 	// set the taxonomy
 	txHashSet, err := stream.SetTaxonomy(ctx, taxonomy)
@@ -66,7 +67,7 @@ func (c *Client) DeployComposedStreamWithTaxonomy(ctx context.Context, streamId 
 	if err != nil {
 		return err
 	}
-	log.Printf("Set taxonomy for stream %s, with txHash %s\n", streamId.String(), txHashSet.Hex())
+	logging.Logger.Info("Set taxonomy for stream", zap.String("streamId", streamId.String()), zap.String("txHash", txHashSet.Hex()))
 
 	return nil
 }
