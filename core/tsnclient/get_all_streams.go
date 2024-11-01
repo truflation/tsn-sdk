@@ -3,9 +3,10 @@ package tsnclient
 import (
 	"context"
 	kwiltypes "github.com/kwilteam/kwil-db/core/types"
+	"github.com/truflation/tsn-sdk/core/logging"
 	tsntypes "github.com/truflation/tsn-sdk/core/types"
 	"github.com/truflation/tsn-sdk/core/util"
-	"log"
+	"go.uber.org/zap"
 )
 
 // GetAllStreams returns all streams from the TSN network
@@ -98,7 +99,7 @@ func (c *Client) GetAllInitializedStreams(ctx context.Context, input tsntypes.Ge
 			deployedStream, err := c.LoadStream(streamLocator)
 			if err != nil {
 				// in case of error, we just continue to the next stream
-				log.Printf("skipping stream %s due to error on load: %s", streamId.String(), err.Error())
+				logging.Logger.Warn("skipping stream due to error on load", zap.String("streamId", streamId.String()), zap.Error(err))
 				continue
 			}
 
@@ -106,13 +107,13 @@ func (c *Client) GetAllInitializedStreams(ctx context.Context, input tsntypes.Ge
 			values, err := deployedStream.GetType(ctx)
 			if err != nil {
 				// in case of error, we just continue to the next stream, it means the stream is not initialized
-				log.Printf("skipping stream %s due to error on get type: %s", streamId.String(), err.Error())
+				logging.Logger.Warn("skipping stream due to error on get type", zap.String("streamId", streamId.String()), zap.Error(err))
 				continue
 			}
 
 			if len(values) == 0 {
 				// type can't ever be disabled
-				log.Printf("no type found on stream %s, check if the stream is initialized, skipping", streamId.String())
+				logging.Logger.Warn("no type found on stream, check if the stream is initialized, skipping", zap.String("streamId", streamId.String()))
 				continue
 			}
 
