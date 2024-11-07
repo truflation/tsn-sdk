@@ -2,7 +2,6 @@ package contractsapi
 
 import (
 	"context"
-	"fmt"
 	"github.com/cockroachdb/apd/v3"
 	"github.com/golang-sql/civil"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
@@ -74,7 +73,7 @@ func (s *Stream) getMetadata(ctx context.Context, params getMetadataParams) ([]g
 
 	res, err := s.call(ctx, "get_metadata", args)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return DecodeCallResult[getMetadataResult](res)
@@ -92,9 +91,8 @@ func (s *Stream) batchInsertMetadata(ctx context.Context, inputs []metadataInput
 	for _, input := range inputs {
 		valType := input.Key.GetType()
 		valStr, err := valType.StringFromValue(input.Value)
-
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		tuples = append(tuples, []any{input.Key.String(), valStr, string(valType)})
@@ -136,23 +134,23 @@ func (s *Stream) GetRecord(ctx context.Context, input types.GetRecordInput) ([]t
 
 	results, err := s.call(ctx, "get_record", args)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	rawOutputs, err := DecodeCallResult[GetRecordRawOutput](results)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	var outputs []types.StreamRecord
 	for _, rawOutput := range rawOutputs {
 		value, _, err := apd.NewFromString(rawOutput.Value)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		dateValue, err := civil.ParseDate(rawOutput.DateValue)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		outputs = append(outputs, types.StreamRecord{
 			DateValue: dateValue,
@@ -174,23 +172,23 @@ func (s *Stream) GetIndex(ctx context.Context, input types.GetIndexInput) ([]typ
 
 	results, err := s.call(ctx, "get_index", args)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	rawOutputs, err := DecodeCallResult[GetIndexRawOutput](results)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	var outputs []types.StreamIndex
 	for _, rawOutput := range rawOutputs {
 		value, _, err := apd.NewFromString(rawOutput.Value)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		dateValue, err := civil.ParseDate(rawOutput.DateValue)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		outputs = append(outputs, types.StreamIndex{
 			DateValue: dateValue,
@@ -209,26 +207,26 @@ func (s *Stream) GetFirstRecord(ctx context.Context, input types.GetFirstRecordI
 
 	results, err := s.call(ctx, "get_first_record", args)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	rawOutputs, err := DecodeCallResult[GetRecordRawOutput](results)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if len(rawOutputs) == 0 {
-		return nil, fmt.Errorf(ErrorRecordNotFound)
+		return nil, ErrorRecordNotFound
 	}
 
 	rawOutput := rawOutputs[0]
 	value, _, err := apd.NewFromString(rawOutput.Value)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	dateValue, err := civil.ParseDate(rawOutput.DateValue)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return &types.StreamRecord{

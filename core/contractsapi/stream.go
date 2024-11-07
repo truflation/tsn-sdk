@@ -8,6 +8,7 @@ import (
 	"github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	kwilUtils "github.com/kwilteam/kwil-db/core/utils"
+	"github.com/pkg/errors"
 	tsntypes "github.com/truflation/tsn-sdk/core/types"
 	"github.com/truflation/tsn-sdk/core/util"
 	"strings"
@@ -34,10 +35,10 @@ type NewStreamOptions struct {
 	Deployer []byte
 }
 
-const (
-	ErrorStreamNotFound = "stream not found"
-	ErrorDatasetExists  = "dataset exists"
-	ErrorRecordNotFound = "record not found"
+var (
+	ErrorStreamNotFound = errors.New("stream not found")
+	ErrorDatasetExists  = errors.New("dataset exists")
+	ErrorRecordNotFound = errors.New("record not found")
 )
 
 // NewStream creates a new stream, it is straightforward and only requires the stream id and the deployer
@@ -48,14 +49,14 @@ func NewStream(options NewStreamOptions) (*Stream, error) {
 
 	// if there's no deployer, let's throw an error
 	if len(deployer) == 0 {
-		return nil, fmt.Errorf("contract owner is required")
+		return nil, errors.New("contract owner is required")
 	}
 
 	dbid := kwilUtils.GenerateDBID(streamId.String(), deployer)
 	// check if the stream is found
 	if _, err := optClient.GetSchema(context.Background(), dbid); err == nil {
 		// if there's no error, it means the stream is already deployed
-		return nil, fmt.Errorf(ErrorDatasetExists)
+		return nil, ErrorDatasetExists
 	}
 
 	return &Stream{
@@ -73,7 +74,7 @@ func LoadStream(options NewStreamOptions) (*Stream, error) {
 	optClient := options.Client
 
 	if len(deployer) == 0 {
-		return nil, fmt.Errorf("contract owner is required")
+		return nil, errors.New("contract owner is required")
 	}
 
 	dbid := kwilUtils.GenerateDBID(streamId.String(), deployer)
@@ -81,10 +82,10 @@ func LoadStream(options NewStreamOptions) (*Stream, error) {
 	if _, err := optClient.GetSchema(context.Background(), dbid); err != nil {
 		// if err contains "dataset not found", it means the stream is not deployed, then we return our error
 		if strings.Contains(err.Error(), "dataset not found") {
-			return nil, fmt.Errorf(ErrorStreamNotFound)
+			return nil, ErrorStreamNotFound
 		}
 
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return &Stream{
@@ -116,14 +117,13 @@ func (s *Stream) GetType(ctx context.Context) (tsntypes.StreamType, error) {
 		Key:        "type",
 		OnlyLatest: true,
 	})
-
 	if err != nil {
-		return "", err
+		return "", errors.WithStack(err)
 	}
 
 	if len(values) == 0 {
 		// type can't ever be disabled
-		return "", fmt.Errorf("no type found, check if the stream is initialized")
+		return "", errors.New("no type found, check if the stream is initialized")
 	}
 
 	switch values[0].ValueS {
@@ -132,11 +132,11 @@ func (s *Stream) GetType(ctx context.Context) (tsntypes.StreamType, error) {
 	case "primitive":
 		s._type = tsntypes.StreamTypePrimitive
 	default:
-		return "", fmt.Errorf("unknown stream type: %s", values[0].ValueS)
+		return "", errors.New(fmt.Sprintf("unknown stream type: %s", values[0].ValueS))
 	}
 
 	if s._type == "" {
-		return "", fmt.Errorf("stream type is not set")
+		return "", errors.New("stream type is not set")
 	}
 
 	return s._type, nil
@@ -151,20 +151,18 @@ func (s *Stream) GetStreamOwner(ctx context.Context) ([]byte, error) {
 		Key:        "stream_owner",
 		OnlyLatest: true,
 	})
-
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if len(values) == 0 {
 		// owner can't ever be disabled
-		return nil, fmt.Errorf("no owner found (is the stream initialized?)")
+		return nil, errors.New("no owner found (is the stream initialized?)")
 	}
 
 	s._owner, err = hex.DecodeString(values[0].ValueRef)
-
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return s._owner, nil
@@ -179,13 +177,13 @@ func (s *Stream) checkInitialized(ctx context.Context) error {
 	err := s.checkDeployed(ctx)
 
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	// check if is initialized by trying to get its type
 	_, err = s.GetType(ctx)
 	if err != nil {
-		return fmt.Errorf("check if the stream is initialized: %w", err)
+		return errors.Wrap(err, "check if the stream is initialized")
 	}
 
 	s._initialized = true
@@ -200,7 +198,7 @@ func (s *Stream) checkDeployed(ctx context.Context) error {
 
 	_, err := s.GetSchema(ctx)
 	if err != nil {
-		return fmt.Errorf("check if the stream is deployed: %w", err)
+		return errors.Wrap(err, "check if the stream is deployed")
 	}
 
 	s._deployed = true
@@ -221,7 +219,7 @@ func (s *Stream) execute(ctx context.Context, method string, args [][]any) (tran
 func (s *Stream) checkedExecute(ctx context.Context, method string, args [][]any) (transactions.TxHash, error) {
 	err := s.checkInitialized(ctx)
 	if err != nil {
-		return transactions.TxHash{}, err
+		return transactions.TxHash{}, errors.WithStack(err)
 	}
 
 	return s.execute(ctx, method, args)

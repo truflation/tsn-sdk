@@ -3,6 +3,7 @@ package tsnclient
 import (
 	"context"
 	kwiltypes "github.com/kwilteam/kwil-db/core/types"
+	"github.com/pkg/errors"
 	"github.com/truflation/tsn-sdk/core/logging"
 	tsntypes "github.com/truflation/tsn-sdk/core/types"
 	"github.com/truflation/tsn-sdk/core/util"
@@ -15,9 +16,8 @@ func (c *Client) GetAllStreams(ctx context.Context, input tsntypes.GetAllStreams
 
 	// get all deployed contracts
 	contracts, err := kwilClient.ListDatabases(ctx, input.Owner)
-
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	// create a list of stream locators
@@ -28,11 +28,10 @@ func (c *Client) GetAllStreams(ctx context.Context, input tsntypes.GetAllStreams
 	for _, contract := range contracts {
 		schema, err := kwilClient.GetSchema(ctx, contract.DBID)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		isStream, err := getIsStream(schema)
-
 		if isStream {
 			streamId, err := util.NewStreamId(contract.Name)
 			if err != nil {
@@ -42,7 +41,7 @@ func (c *Client) GetAllStreams(ctx context.Context, input tsntypes.GetAllStreams
 			dataProvider, err := util.NewEthereumAddressFromBytes(contract.Owner)
 			if err != nil {
 				// we should return the error in this case. Every owner should be an ethereum address
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 
 			streamLocators = append(streamLocators, tsntypes.StreamLocator{
@@ -60,9 +59,8 @@ func (c *Client) GetAllInitializedStreams(ctx context.Context, input tsntypes.Ge
 
 	// get all deployed contracts
 	contracts, err := kwilClient.ListDatabases(ctx, input.Owner)
-
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	// create a list of stream locators
@@ -73,7 +71,7 @@ func (c *Client) GetAllInitializedStreams(ctx context.Context, input tsntypes.Ge
 	for _, contract := range contracts {
 		schema, err := kwilClient.GetSchema(ctx, contract.DBID)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		isStream, err := getIsStream(schema)
@@ -87,7 +85,7 @@ func (c *Client) GetAllInitializedStreams(ctx context.Context, input tsntypes.Ge
 			dataProvider, err := util.NewEthereumAddressFromBytes(contract.Owner)
 			if err != nil {
 				// we should return the error in this case. Every owner should be an ethereum address
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 
 			streamLocator := tsntypes.StreamLocator{

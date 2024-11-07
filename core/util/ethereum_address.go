@@ -4,6 +4,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
+	"github.com/truflation/tsn-sdk/core/logging"
+	"go.uber.org/zap"
 	"regexp"
 	"strings"
 )
@@ -26,7 +29,7 @@ func NewEthereumAddressFromString(address string) (EthereumAddress, error) {
 	}
 
 	if err := ethereumAddress.validate(); err != nil {
-		return EthereumAddress{}, err
+		return EthereumAddress{}, errors.WithStack(err)
 	}
 
 	return ethereumAddress, nil
@@ -40,19 +43,19 @@ func NewEthereumAddressFromBytes(address []byte) (EthereumAddress, error) {
 func Unsafe_NewEthereumAddressFromString(address string) EthereumAddress {
 	e, err := NewEthereumAddressFromString(address)
 	if err != nil {
-		panic(err)
+		logging.Logger.Panic("error creating ethereum address", zap.Error(err))
 	}
 	return e
 }
 
 func (e *EthereumAddress) validate() error {
 	if e.hex == "" {
-		return fmt.Errorf("address cannot be empty")
+		return errors.New("address cannot be empty")
 	}
 
 	regexStr := "^0x[a-fA-F0-9]{40}$"
 	if !regexp.MustCompile(regexStr).MatchString(e.hex) {
-		return fmt.Errorf("address does not match regex %s: %s", regexStr, e.hex)
+		return errors.New(fmt.Sprintf("address does not match regex %s: %s", regexStr, e.hex))
 	}
 
 	return nil
@@ -60,7 +63,7 @@ func (e *EthereumAddress) validate() error {
 
 func (e *EthereumAddress) checkCorrectlyCreated() {
 	if !e.correctlyCreated {
-		panic("please create an EthereumAddress with NewEthereumAddress")
+		logging.Logger.Panic("please create an EthereumAddress with NewEthereumAddress")
 	}
 }
 
@@ -76,7 +79,7 @@ func (e *EthereumAddress) Bytes() []byte {
 	// decode the hex string to bytes (remove the 0x prefix first)
 	bytes, err := hex.DecodeString(e.hex[2:])
 	if err != nil {
-		panic(err)
+		logging.Logger.Panic("error decoding hex string to bytes", zap.Error(err))
 	}
 	return bytes
 }
@@ -91,12 +94,12 @@ func (e *EthereumAddress) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON implements the json.Unmarshaler interface
 func (e *EthereumAddress) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &e.hex); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	// verify when decoding
 	if err := e.validate(); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	e.correctlyCreated = true
