@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/golang-sql/civil"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
+	"github.com/pkg/errors"
 	"github.com/truflation/tsn-sdk/core/types"
 	"github.com/truflation/tsn-sdk/core/util"
 	"strconv"
@@ -16,8 +17,8 @@ type ComposedStream struct {
 
 var _ types.IComposedStream = (*ComposedStream)(nil)
 
-const (
-	ErrorStreamNotComposed = "stream is not a composed stream"
+var (
+	ErrorStreamNotComposed = errors.New("stream is not a composed stream")
 )
 
 func ComposedStreamFromStream(stream Stream) (*ComposedStream, error) {
@@ -29,7 +30,7 @@ func ComposedStreamFromStream(stream Stream) (*ComposedStream, error) {
 func LoadComposedStream(opts NewStreamOptions) (*ComposedStream, error) {
 	stream, err := LoadStream(opts)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return ComposedStreamFromStream(*stream)
@@ -43,17 +44,17 @@ func (c *ComposedStream) checkValidComposedStream(ctx context.Context) error {
 	// first check if is initialized
 	err := c.checkInitialized(ctx)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	// then check if is composed
 	streamType, err := c.GetType(ctx)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	if streamType != types.StreamTypeComposed {
-		return fmt.Errorf(ErrorStreamNotComposed)
+		return ErrorStreamNotComposed
 	}
 
 	return nil
@@ -62,7 +63,7 @@ func (c *ComposedStream) checkValidComposedStream(ctx context.Context) error {
 func (c *ComposedStream) checkedExecute(ctx context.Context, method string, args [][]any) (transactions.TxHash, error) {
 	err := c.checkValidComposedStream(ctx)
 	if err != nil {
-		return transactions.TxHash{}, err
+		return transactions.TxHash{}, errors.WithStack(err)
 	}
 
 	return c.execute(ctx, method, args)
@@ -81,25 +82,24 @@ type DescribeTaxonomiesResult struct {
 
 func (c *ComposedStream) DescribeTaxonomies(ctx context.Context, params types.DescribeTaxonomiesParams) (types.Taxonomy, error) {
 	records, err := c.call(ctx, "describe_taxonomies", []any{params.LatestVersion})
-
 	if err != nil {
-		return types.Taxonomy{}, err
+		return types.Taxonomy{}, errors.WithStack(err)
 	}
 
 	result, err := DecodeCallResult[DescribeTaxonomiesResult](records)
 	if err != nil {
-		return types.Taxonomy{}, err
+		return types.Taxonomy{}, errors.WithStack(err)
 	}
 
 	var taxonomyItems []types.TaxonomyItem
 	for _, r := range result {
 		dpAddress, err := util.NewEthereumAddressFromString(r.ChildDataProvider)
 		if err != nil {
-			return types.Taxonomy{}, err
+			return types.Taxonomy{}, errors.WithStack(err)
 		}
 		weight, err := strconv.ParseFloat(r.Weight, 64)
 		if err != nil {
-			return types.Taxonomy{}, err
+			return types.Taxonomy{}, errors.WithStack(err)
 		}
 
 		taxonomyItems = append(taxonomyItems, types.TaxonomyItem{

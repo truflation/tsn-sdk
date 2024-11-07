@@ -8,9 +8,12 @@ import (
 	"github.com/kwilteam/kwil-db/core/log"
 	kwilClientType "github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
+	"github.com/pkg/errors"
 	tsn_api "github.com/truflation/tsn-sdk/core/contractsapi"
+	"github.com/truflation/tsn-sdk/core/logging"
 	clientType "github.com/truflation/tsn-sdk/core/types"
 	"github.com/truflation/tsn-sdk/core/util"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -30,7 +33,7 @@ func NewClient(ctx context.Context, provider string, options ...Option) (*Client
 	c.kwilOptions = kwilClientType.DefaultOptions()
 	kwilClient, err := kwilClientPkg.NewClient(ctx, provider, c.kwilOptions)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	c.kwilClient = kwilClient
 	for _, option := range options {
@@ -39,7 +42,7 @@ func NewClient(ctx context.Context, provider string, options ...Option) (*Client
 
 	// Validate the client
 	if err = c.Validate(); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return c, nil
@@ -91,7 +94,7 @@ func (c *Client) DestroyStream(ctx context.Context, streamId util.StreamId) (tra
 		KwilClient: c.kwilClient,
 	})
 	if err != nil {
-		return transactions.TxHash{}, err
+		return transactions.TxHash{}, errors.WithStack(err)
 	}
 
 	return out.TxHash, nil
@@ -132,7 +135,7 @@ func (c *Client) Address() util.EthereumAddress {
 	address, err := util.NewEthereumAddressFromBytes(c.kwilClient.Signer.Identity())
 	if err != nil {
 		// should never happen
-		panic(err)
+		logging.Logger.Panic("failed to get address from signer", zap.Error(err))
 	}
 	return address
 }

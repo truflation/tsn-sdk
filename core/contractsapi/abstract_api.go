@@ -33,9 +33,8 @@ func (s *Stream) GetComposeVisibility(ctx context.Context) (*util.VisibilityEnum
 		Key:        types.ComposeVisibilityKey,
 		OnlyLatest: true,
 	})
-
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	// there can be no visibility set if
@@ -47,13 +46,12 @@ func (s *Stream) GetComposeVisibility(ctx context.Context) (*util.VisibilityEnum
 
 	value, err := results[0].GetValueByKey(types.ComposeVisibilityKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	visibility, err := util.NewVisibilityEnum(value.(int))
-
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return &visibility, nil
@@ -68,9 +66,8 @@ func (s *Stream) GetReadVisibility(ctx context.Context) (*util.VisibilityEnum, e
 		Key:        types.ReadVisibilityKey,
 		OnlyLatest: true,
 	})
-
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	// there can be no visibility set if
@@ -81,9 +78,8 @@ func (s *Stream) GetReadVisibility(ctx context.Context) (*util.VisibilityEnum, e
 	}
 
 	visibility, err := util.NewVisibilityEnum(values[0].ValueI)
-
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return &visibility, nil
@@ -93,9 +89,8 @@ func (s *Stream) GetAllowedReadWallets(ctx context.Context) ([]util.EthereumAddr
 	results, err := s.getMetadata(ctx, getMetadataParams{
 		Key: types.AllowReadWalletKey,
 	})
-
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	wallets := make([]util.EthereumAddress, len(results))
@@ -103,12 +98,12 @@ func (s *Stream) GetAllowedReadWallets(ctx context.Context) ([]util.EthereumAddr
 	for i, result := range results {
 		value, err := result.GetValueByKey(types.AllowReadWalletKey)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		address, err := util.NewEthereumAddressFromString(value.(string))
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		wallets[i] = address
@@ -121,9 +116,8 @@ func (s *Stream) GetAllowedComposeStreams(ctx context.Context) ([]types.StreamLo
 	results, err := s.getMetadata(ctx, getMetadataParams{
 		Key: types.AllowComposeStreamKey,
 	})
-
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	streams := make([]types.StreamLocator, len(results))
@@ -131,7 +125,7 @@ func (s *Stream) GetAllowedComposeStreams(ctx context.Context) ([]types.StreamLo
 	for i, result := range results {
 		value, err := result.GetValueByKey(types.AllowComposeStreamKey)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		// dbids are stored, not streamIds and data providers
@@ -142,19 +136,18 @@ func (s *Stream) GetAllowedComposeStreams(ctx context.Context) ([]types.StreamLo
 		}
 
 		loc, err := s._client.GetSchema(ctx, dbid)
-
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		streamId, err := util.NewStreamId(loc.Name)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		owner, err := util.NewEthereumAddressFromString(loc.Owner.String())
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		streams[i] = types.StreamLocator{
@@ -180,7 +173,7 @@ func (s *Stream) disableMetadataByRef(ctx context.Context, key types.MetadataKey
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if len(metadataList) == 0 {

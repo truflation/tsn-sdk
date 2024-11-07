@@ -3,6 +3,7 @@ package util
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 )
 
 type VisibilityEnum int
@@ -19,7 +20,7 @@ func NewVisibilityEnum(value int) (VisibilityEnum, error) {
 	case 1:
 		return PrivateVisibility, nil
 	default:
-		return 0, fmt.Errorf("invalid visibility value: %d", value)
+		return 0, errors.New(fmt.Sprintf("invalid visibility value: %d", value))
 	}
 }
 
@@ -28,7 +29,7 @@ func (v *VisibilityEnum) UnmarshalJSON(data []byte) error {
 	var value int
 	err := json.Unmarshal(data, &value)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	switch value {
@@ -37,7 +38,7 @@ func (v *VisibilityEnum) UnmarshalJSON(data []byte) error {
 	case 1:
 		*v = PrivateVisibility
 	default:
-		return fmt.Errorf("invalid visibility value: %d", value)
+		return errors.New(fmt.Sprintf("invalid visibility value: %d", value))
 	}
 
 	return nil

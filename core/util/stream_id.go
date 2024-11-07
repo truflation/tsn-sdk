@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/pkg/errors"
 )
 
 // GenerateStreamId is the hash fn to generate a stream id from a string
@@ -35,7 +36,7 @@ func NewStreamId(s string) (*StreamId, error) {
 	}
 
 	if err := id.Validate(); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return &id, nil
@@ -44,7 +45,7 @@ func NewStreamId(s string) (*StreamId, error) {
 func (s *StreamId) Validate() error {
 	// verify if the string is a valid stream id
 	if len(s.id) != 32 || s.id[:2] != "st" {
-		return fmt.Errorf("invalid stream id '%s'", s)
+		return errors.New(fmt.Sprintf("invalid stream id '%s'", s))
 	}
 	return nil
 }

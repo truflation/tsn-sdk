@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/golang-sql/civil"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
+	"github.com/pkg/errors"
 )
 
 type Taxonomy struct {
@@ -44,20 +45,20 @@ func (t *TaxonomyItem) UnmarshalJSON(b []byte) error {
 	var items []json.RawMessage
 	err := json.Unmarshal(b, &items)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	if len(items) != 2 {
-		return fmt.Errorf("expected 2 elements, got %d", len(items))
+		return errors.New(fmt.Sprintf("expected 2 elements, got %d", len(items)))
 	}
 
 	// Unmarshal the first item as parentOf type
 	if err := json.Unmarshal(items[0], &t.ChildStream.StreamId); err != nil {
-		return fmt.Errorf("expected string, got error: %v", err)
+		return errors.Wrap(err, "expected string")
 	}
 
 	// Unmarshal the second item as weight type
 	if err := json.Unmarshal(items[1], &t.Weight); err != nil {
-		return fmt.Errorf("expected float64, got error: %v", err)
+		return errors.Wrap(err, "expected float64")
 	}
 
 	return nil

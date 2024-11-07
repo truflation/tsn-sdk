@@ -1,6 +1,9 @@
 package types
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/pkg/errors"
+)
 
 type StreamType string
 
@@ -71,7 +74,7 @@ func (s MetadataType) StringFromValue(valueObj MetadataValue) (string, error) {
 	case MetadataTypeRef:
 		return value.(string), nil
 	default:
-		return "", fmt.Errorf("unknown metadata type: %s", s)
+		return "", errors.New(fmt.Sprintf("unknown metadata type: %s", s))
 	}
 }
 

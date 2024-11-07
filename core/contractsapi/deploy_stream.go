@@ -28,7 +28,7 @@ func DeployStream(ctx context.Context, input DeployStreamInput) (transactions.Tx
 	contractContent, err := GetContractContent(input)
 	schema, err := parse.Parse(contractContent)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	schema.Name = input.StreamId.String()
