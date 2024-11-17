@@ -198,10 +198,6 @@ procedure insert_metadata(
         VALUES ($uuid, $key, $value_i, $value_f, $value_s, $value_b, LOWER($value_ref), $current_block);
 }
 
-procedure insert_default_base_date($base_date text) public {
-    insert_metadata('default_base_date', $base_date, 'string');
-}
-
 // key: the metadata key to look for
 // only_latest: if true, only return the latest version of the metadata
 // ref: if provided, only return metadata with that ref
