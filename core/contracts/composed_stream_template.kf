@@ -399,13 +399,21 @@ procedure get_index($date_from text, $date_to text, $frozen_at int, $base_date t
     $in_range bool := false;
     $last_date text;
     $last_value decimal(36,18);
+    $effective_base_date text := $base_date;
+
+    if $effective_base_date is null OR $effective_base_date == '' {
+        for $v_row in SELECT * FROM get_metadata('default_base_date', true, null) LIMIT 1 {
+            $effective_base_date := $v_row.value_s;
+        }
+    }
+
     // here, we sum all of the indexes that were found by aggregating on the date_value
     for $row in SELECT date_value, total_value_with_weight / total_weight as value FROM
         (SELECT
             date_value,
             SUM(value_with_weight)::decimal(36,18) AS total_value_with_weight,
             SUM(weight)::decimal(36,18) AS total_weight
-        FROM get_index_filled($date_from, $date_to, $frozen_at, $base_date) group by date_value) as r {
+        FROM get_index_filled($date_from, $date_to, $frozen_at, $effective_base_date) group by date_value) as r {
         // when we arrive in the range, we start emitting. If there was a previous value, we emit it
         if $in_range == false {
             if $row.date_value >= $date_from {
@@ -627,6 +635,10 @@ procedure insert_metadata(
     // insert data
     INSERT INTO metadata (row_id, metadata_key, value_i, value_f, value_s, value_b, value_ref, created_at)
         VALUES ($uuid, $key, $value_i, $value_f, $value_s, $value_b, LOWER($value_ref), $current_block);
+}
+
+procedure insert_default_base_date($base_date text) public {
+    insert_metadata('default_base_date', $base_date, 'string');
 }
 
 // key: the metadata key to look for
