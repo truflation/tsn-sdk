@@ -163,7 +163,7 @@ func (s *Stream) SetReadVisibility(ctx context.Context, visibility util.Visibili
 	return s.insertMetadata(ctx, types.ReadVisibilityKey, types.NewMetadataValue(int(visibility)))
 }
 
-func (s *Stream) InsertDefaultBaseDate(ctx context.Context, baseDate string) (transactions.TxHash, error) {
+func (s *Stream) SetDefaultBaseDate(ctx context.Context, baseDate string) (transactions.TxHash, error) {
 	return s.insertMetadata(ctx, types.DefaultBaseDateKey, types.NewMetadataValue(baseDate))
 }
 

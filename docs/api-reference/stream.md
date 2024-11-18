@@ -147,10 +147,10 @@ Disables a stream from using this stream as a child.
 - `transactions.TxHash`: The transaction hash for the operation.
 - `error`: An error if the operation fails.
 
-### `DisableComposeStream`
+### `SetDefaultBaseDate`
 
 ```go
-InsertDefaultBaseDate(ctx context.Context, baseDate string) (transactions.TxHash, error)
+SetDefaultBaseDate(ctx context.Context, baseDate string) (transactions.TxHash, error)
 ```
 
 Insert a default base date based on its category.

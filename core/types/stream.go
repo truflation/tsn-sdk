@@ -2,11 +2,12 @@ package types
 
 import (
 	"context"
+	"time"
+
 	"github.com/cockroachdb/apd/v3"
 	"github.com/golang-sql/civil"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/truflation/tsn-sdk/core/util"
-	"time"
 )
 
 type GetRecordInput struct {
@@ -65,6 +66,6 @@ type IStream interface {
 	// GetAllowedComposeStreams gets the streams allowed to compose this stream
 	GetAllowedComposeStreams(ctx context.Context) ([]StreamLocator, error)
 
-	// InsertDefaultBaseDate insert a metadata row with `default_base_date` key
-	InsertDefaultBaseDate(ctx context.Context, baseDate string) (transactions.TxHash, error)
+	// SetDefaultBaseDate insert a metadata row with `default_base_date` key
+	SetDefaultBaseDate(ctx context.Context, baseDate string) (transactions.TxHash, error)
 }
