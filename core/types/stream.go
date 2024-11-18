@@ -64,4 +64,7 @@ type IStream interface {
 	GetAllowedReadWallets(ctx context.Context) ([]util.EthereumAddress, error)
 	// GetAllowedComposeStreams gets the streams allowed to compose this stream
 	GetAllowedComposeStreams(ctx context.Context) ([]StreamLocator, error)
+
+	// InsertDefaultBaseDate insert a metadata row with `default_base_date` key
+	InsertDefaultBaseDate(ctx context.Context, baseDate string) (transactions.TxHash, error)
 }
