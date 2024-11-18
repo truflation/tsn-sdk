@@ -147,3 +147,19 @@ Disables a stream from using this stream as a child.
 - `transactions.TxHash`: The transaction hash for the operation.
 - `error`: An error if the operation fails.
 
+### `SetDefaultBaseDate`
+
+```go
+SetDefaultBaseDate(ctx context.Context, baseDate string) (transactions.TxHash, error)
+```
+
+Insert a default base date based on its category.
+
+**Parameters:**
+- `ctx`: The context for the operation.
+- `baseDate`: The base date in string with format yyyy-mm-dd
+
+**Returns:**
+- `transactions.TxHash`: The transaction hash for the operation.
+- `error`: An error if the operation fails.
+

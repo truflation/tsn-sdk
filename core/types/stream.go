@@ -2,11 +2,12 @@ package types
 
 import (
 	"context"
+	"time"
+
 	"github.com/cockroachdb/apd/v3"
 	"github.com/golang-sql/civil"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/truflation/tsn-sdk/core/util"
-	"time"
 )
 
 type GetRecordInput struct {
@@ -64,4 +65,7 @@ type IStream interface {
 	GetAllowedReadWallets(ctx context.Context) ([]util.EthereumAddress, error)
 	// GetAllowedComposeStreams gets the streams allowed to compose this stream
 	GetAllowedComposeStreams(ctx context.Context) ([]StreamLocator, error)
+
+	// SetDefaultBaseDate insert a metadata row with `default_base_date` key
+	SetDefaultBaseDate(ctx context.Context, baseDate string) (transactions.TxHash, error)
 }

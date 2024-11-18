@@ -163,6 +163,10 @@ func (s *Stream) SetReadVisibility(ctx context.Context, visibility util.Visibili
 	return s.insertMetadata(ctx, types.ReadVisibilityKey, types.NewMetadataValue(int(visibility)))
 }
 
+func (s *Stream) SetDefaultBaseDate(ctx context.Context, baseDate string) (transactions.TxHash, error) {
+	return s.insertMetadata(ctx, types.DefaultBaseDateKey, types.NewMetadataValue(baseDate))
+}
+
 var MetadataValueNotFound = errors.New("metadata value not found")
 
 func (s *Stream) disableMetadataByRef(ctx context.Context, key types.MetadataKey, ref string) (transactions.TxHash, error) {

@@ -323,7 +323,14 @@ procedure get_index($date_from text, $date_to text, $frozen_at int, $base_date t
         value decimal(36,18)
         ) {
 
-    $baseValue decimal(36,18) := get_base_value($base_date, $frozen_at);
+    $effective_base_date text := $base_date;
+    if ($effective_base_date == '') {
+        for $v_row in SELECT * FROM get_metadata('default_base_date', true, null) ORDER BY created_at DESC LIMIT 1 {
+            $effective_base_date := $v_row.value_s;
+        }
+    }
+
+    $baseValue decimal(36,18) := get_base_value($effective_base_date, $frozen_at);
     if $baseValue == 0::decimal(36,18) {
         error('base value is 0');
     }
