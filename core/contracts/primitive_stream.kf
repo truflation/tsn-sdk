@@ -325,7 +325,7 @@ procedure get_index($date_from text, $date_to text, $frozen_at int, $base_date t
 
     $effective_base_date text := $base_date;
     if ($effective_base_date == '') {
-        for $v_row in SELECT * FROM get_metadata('default_base_date', true, null) ORDER BY created_at LIMIT 1 {
+        for $v_row in SELECT * FROM get_metadata('default_base_date', true, null) ORDER BY created_at DESC LIMIT 1 {
             $effective_base_date := $v_row.value_s;
         }
     }
