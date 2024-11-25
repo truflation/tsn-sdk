@@ -1,14 +1,14 @@
 # Stream Lifecycle
 
-Understanding streams' lifecycle and associated transactions is crucial for effective interaction with the Truflation Stream Network (TSN). This document outlines the key stages in a stream's lifecycle and provides best practices for managing transaction dependencies.
+Understanding streams' lifecycle and associated transactions is crucial for effective interaction with the Truf Network (TN). This document outlines the key stages in a stream's lifecycle and provides best practices for managing transaction dependencies.
 
 ## Transaction Lifecycle
 
-TSN operations rely on blockchain transactions. Each transaction must be included in a block and mined to be considered valid and stored, which introduces a delay between initiating an action and its completion.
+TN operations rely on blockchain transactions. Each transaction must be included in a block and mined to be considered valid and stored, which introduces a delay between initiating an action and its completion.
 
 ### Key Points:
 
-1. **Block Time**: In the current TSN implementation, blocks are mined approximately every 6 seconds.
+1. **Block Time**: In the current TN implementation, blocks are mined approximately every 6 seconds.
 2. **Transaction Confirmation**: Always wait for transaction confirmation before performing dependent actions.
 3. **Nonce Management**: Transactions from a single wallet must be processed in order. To prevent nonce errors, avoid parallelizing operations from a single wallet.
 
@@ -19,12 +19,12 @@ TSN operations rely on blockchain transactions. Each transaction must be include
 The first step in creating a stream is deploying the contract.
 
 ```go
-deployTxHash, err := tsnClient.DeployStream(ctx, streamId, types.StreamTypePrimitive)
+deployTxHash, err := tnClient.DeployStream(ctx, streamId, types.StreamTypePrimitive)
 if err != nil {
     // Handle error
 }
 // Wait for transaction to be mined
-txRes, err := tsnClient.WaitForTx(ctx, deployTxHash, time.Second)
+txRes, err := tnClient.WaitForTx(ctx, deployTxHash, time.Second)
 if err != nil {
     // Handle error
 }
@@ -79,7 +79,7 @@ if err != nil {
 Streams can be destroyed when no longer needed.
 
 ```go
-destroyResult, err := tsnClient.DestroyStream(ctx, streamId)
+destroyResult, err := tnClient.DestroyStream(ctx, streamId)
 if err != nil {
     // Handle error
 }
@@ -95,7 +95,7 @@ if err != nil {
     ```go
     deployTxHashes := make([]string, len(streamIds))
     for i, id := range streamIds {
-        txHash, err := tsnClient.DeployStream(ctx, id, types.StreamTypePrimitive)
+        txHash, err := tnClient.DeployStream(ctx, id, types.StreamTypePrimitive)
         if err != nil {
             // Handle error
         }

@@ -5,7 +5,7 @@ import (
 	"github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/pkg/errors"
-	"github.com/truflation/tsn-sdk/core/util"
+	"github.com/trufnetwork/truf-node-sdk-go/core/util"
 )
 import "github.com/go-playground/validator/v10"
 
@@ -22,7 +22,7 @@ type DestroyStreamOutput struct {
 	TxHash transactions.TxHash
 }
 
-// DestroyStream destroys a stream from TSN
+// DestroyStream destroys a stream from TN
 func DestroyStream(ctx context.Context, input DestroyStreamInput) (*DestroyStreamOutput, error) {
 	if err := input.Validate(); err != nil {
 		return nil, errors.WithStack(err)

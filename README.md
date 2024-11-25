@@ -1,10 +1,10 @@
-# Truflation Stream Network (TSN) SDK
+# Truf Network (TN) SDK
 
-The TSN SDK provides developers with tools to interact with the Truflation Stream Network, a decentralized platform for publishing, composing, and consuming economic data streams.
+The Truf Node SDK provides developers with tools to interact with the Truf Network, a decentralized platform for publishing, composing, and consuming economic data streams.
 
 ## Support
 
-This documentation is a work in progress. If you need help, don't hesitate to [open an issue](https://github.com/truflation/tsn-sdk/issues).
+This documentation is a work in progress. If you need help, don't hesitate to [open an issue](https://github.com/trufnetwork/truf-node-sdk-go/issues).
 
 ## Quick Start
 
@@ -15,7 +15,7 @@ This documentation is a work in progress. If you need help, don't hesitate to [o
 ### Installation
 
 ```bash
-go get github.com/truflation/tsn-sdk
+go get github.com/trufnetwork/truf-node-sdk-go
 
 ```
 
@@ -30,18 +30,18 @@ import (
 	"github.com/golang-sql/civil"
 	"github.com/kwilteam/kwil-db/core/crypto"
 	"github.com/kwilteam/kwil-db/core/crypto/auth"
-	"github.com/truflation/tsn-sdk/core/tsnclient"
-	"github.com/truflation/tsn-sdk/core/types"
-	"github.com/truflation/tsn-sdk/core/util"
+	"github.com/trufnetwork/truf-node-sdk-go/core/tnclient"
+	"github.com/trufnetwork/truf-node-sdk-go/core/types"
+	"github.com/trufnetwork/truf-node-sdk-go/core/util"
 )
 
 func main() {
 	ctx := context.Background()
 
-	// Create TSN client
+	// Create TN client
 	pk, _ := crypto.Secp256k1PrivateKeyFromHex("<your-private-key-hex>")
 	signer := &auth.EthPersonalSigner{Key: *pk}
-	tsnClient, err := tsnclient.NewClient(ctx, "<https://tsn-provider-url.com>", tsnclient.WithSigner(signer))
+	tnClient, err := tnclient.NewClient(ctx, "<https://tsn-provider-url.com>", tnclient.WithSigner(signer))
 	if err != nil {
 		panic(err)
 	}
@@ -49,8 +49,8 @@ func main() {
 	// Load an existing stream
 	streamId := util.GenerateStreamId("your-stream-name")
 	// if we intend to use streams from another provider, we create locators using the provider's address
-	streamLocator := tsnClient.OwnStreamLocator(streamId)
-	stream, err := tsnClient.LoadPrimitiveStream(streamLocator)
+	streamLocator := tnClient.OwnStreamLocator(streamId)
+	stream, err := tnClient.LoadPrimitiveStream(streamLocator)
 	if err != nil {
 		panic(err)
 	}
@@ -76,15 +76,15 @@ For more comprehensive examples and usage patterns, please refer to the test fil
 
 ## Staging Network
 
-We have a staging network accessible at https://staging.tsn.truflation.com. You can interact with it to test and experiment with the TSN SDK. Please use it responsibly, as TSN is currently in an experimental phase. Any contributions and feedback are welcome.
+We have a staging network accessible at https://staging.tsn.truflation.com. You can interact with it to test and experiment with the TN SDK. Please use it responsibly, as TN is currently in an experimental phase. Any contributions and feedback are welcome.
 
 ## Types of Streams
 
 - **Primitive Streams**: Direct data sources from providers. Examples include indexes from known sources, aggregation output such as sentiment analysis, and off-chain/on-chain data.
 - **Composed Streams**: Aggregate and process data from multiple streams.
-- **System Streams**: Contract-managed streams audited and accepted by TSN governance to ensure quality. 
+- **System Streams**: Contract-managed streams audited and accepted by TN governance to ensure quality. 
 
-See [type of streams](./docs/type-of-streams.md) and [default TSN contracts](./docs/contracts.md) guides for more information.
+See [type of streams](./docs/type-of-streams.md) and [default TN contracts](./docs/contracts.md) guides for more information.
 
 ## Roles and Responsibilities
 
@@ -106,11 +106,11 @@ Stream IDs are unique identifiers generated for each stream. They ensure consist
 
 ### Transaction Lifecycle
 
-TSN operations rely on blockchain transactions. Some actions require waiting for previous transactions to be mined before proceeding. For detailed information on transaction dependencies and best practices, see [Stream Lifecycle](./docs/stream-lifecycle.md).
+TN operations rely on blockchain transactions. Some actions require waiting for previous transactions to be mined before proceeding. For detailed information on transaction dependencies and best practices, see [Stream Lifecycle](./docs/stream-lifecycle.md).
 
 ## Permissions and Privacy
 
-TSN supports granular control over stream access and visibility. Streams can be public or private, with read and write permissions configurable at the wallet level. Additionally, you can control whether other streams can compose data from your stream. For more details, refer to [Stream Permissions](./docs/stream-permissions.md).
+TN supports granular control over stream access and visibility. Streams can be public or private, with read and write permissions configurable at the wallet level. Additionally, you can control whether other streams can compose data from your stream. For more details, refer to [Stream Permissions](./docs/stream-permissions.md).
 
 ## Caveats
 
@@ -118,11 +118,11 @@ TSN supports granular control over stream access and visibility. Streams can be 
 
 ## Further Reading
 
-- [TSN-SDK Documentation](./docs/readme.md)
+- [TN-SDK Documentation](./docs/readme.md)
 - [Truflation Whitepaper](https://whitepaper.truflation.com/)
 
-For additional support or questions, please [open an issue](https://github.com/truflation/tsn-sdk/issues) or contact our support team.
+For additional support or questions, please [open an issue](https://github.com/trufnetwork/truf-node-sdk-go/issues) or contact our support team.
 
 ## License
 
-The TSN-SDK repository is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE.md) for more details.
+The Truf-Node-SDK-Go repository is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE.md) for more details.

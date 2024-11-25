@@ -1,4 +1,4 @@
-package tsnclient
+package tnclient
 
 import (
 	"context"
@@ -9,10 +9,10 @@ import (
 	kwilClientType "github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/pkg/errors"
-	tsn_api "github.com/truflation/tsn-sdk/core/contractsapi"
-	"github.com/truflation/tsn-sdk/core/logging"
-	clientType "github.com/truflation/tsn-sdk/core/types"
-	"github.com/truflation/tsn-sdk/core/util"
+	tn_api "github.com/trufnetwork/truf-node-sdk-go/core/contractsapi"
+	"github.com/trufnetwork/truf-node-sdk-go/core/logging"
+	clientType "github.com/trufnetwork/truf-node-sdk-go/core/types"
+	"github.com/trufnetwork/truf-node-sdk-go/core/util"
 	"go.uber.org/zap"
 	"time"
 )
@@ -80,7 +80,7 @@ func (c *Client) GetKwilClient() *kwilClientPkg.Client {
 }
 
 func (c *Client) DeployStream(ctx context.Context, streamId util.StreamId, streamType clientType.StreamType) (transactions.TxHash, error) {
-	return tsn_api.DeployStream(ctx, tsn_api.DeployStreamInput{
+	return tn_api.DeployStream(ctx, tn_api.DeployStreamInput{
 		StreamId:   streamId,
 		StreamType: streamType,
 		KwilClient: c.kwilClient,
@@ -89,7 +89,7 @@ func (c *Client) DeployStream(ctx context.Context, streamId util.StreamId, strea
 }
 
 func (c *Client) DestroyStream(ctx context.Context, streamId util.StreamId) (transactions.TxHash, error) {
-	out, err := tsn_api.DestroyStream(ctx, tsn_api.DestroyStreamInput{
+	out, err := tn_api.DestroyStream(ctx, tn_api.DestroyStreamInput{
 		StreamId:   streamId,
 		KwilClient: c.kwilClient,
 	})
@@ -101,7 +101,7 @@ func (c *Client) DestroyStream(ctx context.Context, streamId util.StreamId) (tra
 }
 
 func (c *Client) LoadStream(streamLocator clientType.StreamLocator) (clientType.IStream, error) {
-	return tsn_api.LoadStream(tsn_api.NewStreamOptions{
+	return tn_api.LoadStream(tn_api.NewStreamOptions{
 		Client:   c.kwilClient,
 		StreamId: streamLocator.StreamId,
 		Deployer: streamLocator.DataProvider.Bytes(),
@@ -109,7 +109,7 @@ func (c *Client) LoadStream(streamLocator clientType.StreamLocator) (clientType.
 }
 
 func (c *Client) LoadPrimitiveStream(streamLocator clientType.StreamLocator) (clientType.IPrimitiveStream, error) {
-	return tsn_api.LoadPrimitiveStream(tsn_api.NewStreamOptions{
+	return tn_api.LoadPrimitiveStream(tn_api.NewStreamOptions{
 		Client:   c.kwilClient,
 		StreamId: streamLocator.StreamId,
 		Deployer: streamLocator.DataProvider.Bytes(),
@@ -117,7 +117,7 @@ func (c *Client) LoadPrimitiveStream(streamLocator clientType.StreamLocator) (cl
 }
 
 func (c *Client) LoadComposedStream(streamLocator clientType.StreamLocator) (clientType.IComposedStream, error) {
-	return tsn_api.LoadComposedStream(tsn_api.NewStreamOptions{
+	return tn_api.LoadComposedStream(tn_api.NewStreamOptions{
 		Client:   c.kwilClient,
 		StreamId: streamLocator.StreamId,
 		Deployer: streamLocator.DataProvider.Bytes(),

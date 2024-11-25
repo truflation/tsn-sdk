@@ -1,6 +1,6 @@
 # Client Interface
 
-The `Client` interface is the primary entry point for interacting with the TSN. It provides methods for managing streams, handling transactions, and interacting with the underlying Kwil client.
+The `Client` interface is the primary entry point for interacting with the TN. It provides methods for managing streams, handling transactions, and interacting with the underlying Kwil client.
 
 ## Methods
 

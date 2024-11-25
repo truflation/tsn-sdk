@@ -7,9 +7,9 @@ import (
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/kwilteam/kwil-db/parse"
 	"github.com/pkg/errors"
-	"github.com/truflation/tsn-sdk/core/contracts"
-	"github.com/truflation/tsn-sdk/core/types"
-	"github.com/truflation/tsn-sdk/core/util"
+	"github.com/trufnetwork/truf-node-sdk-go/core/contracts"
+	"github.com/trufnetwork/truf-node-sdk-go/core/types"
+	"github.com/trufnetwork/truf-node-sdk-go/core/util"
 )
 
 type DeployStreamInput struct {
@@ -23,7 +23,7 @@ type DeployStreamOutput struct {
 	TxHash transactions.TxHash
 }
 
-// DeployStream deploys a stream to TSN
+// DeployStream deploys a stream to TN
 func DeployStream(ctx context.Context, input DeployStreamInput) (transactions.TxHash, error) {
 	contractContent, err := GetContractContent(input)
 	schema, err := parse.Parse(contractContent)

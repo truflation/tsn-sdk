@@ -1,17 +1,17 @@
-package tsnclient
+package tnclient
 
 import (
 	"context"
 	kwiltypes "github.com/kwilteam/kwil-db/core/types"
 	"github.com/pkg/errors"
-	"github.com/truflation/tsn-sdk/core/logging"
-	tsntypes "github.com/truflation/tsn-sdk/core/types"
-	"github.com/truflation/tsn-sdk/core/util"
+	"github.com/trufnetwork/truf-node-sdk-go/core/logging"
+	tntypes "github.com/trufnetwork/truf-node-sdk-go/core/types"
+	"github.com/trufnetwork/truf-node-sdk-go/core/util"
 	"go.uber.org/zap"
 )
 
-// GetAllStreams returns all streams from the TSN network
-func (c *Client) GetAllStreams(ctx context.Context, input tsntypes.GetAllStreamsInput) ([]tsntypes.StreamLocator, error) {
+// GetAllStreams returns all streams from the TN network
+func (c *Client) GetAllStreams(ctx context.Context, input tntypes.GetAllStreamsInput) ([]tntypes.StreamLocator, error) {
 	kwilClient := c.GetKwilClient()
 
 	// get all deployed contracts
@@ -21,7 +21,7 @@ func (c *Client) GetAllStreams(ctx context.Context, input tsntypes.GetAllStreams
 	}
 
 	// create a list of stream locators
-	streamLocators := make([]tsntypes.StreamLocator, 0)
+	streamLocators := make([]tntypes.StreamLocator, 0)
 
 	// iterate over all contracts
 	// if the contract is a stream, add it to the list
@@ -44,7 +44,7 @@ func (c *Client) GetAllStreams(ctx context.Context, input tsntypes.GetAllStreams
 				return nil, errors.WithStack(err)
 			}
 
-			streamLocators = append(streamLocators, tsntypes.StreamLocator{
+			streamLocators = append(streamLocators, tntypes.StreamLocator{
 				StreamId:     *streamId,
 				DataProvider: dataProvider,
 			})
@@ -54,7 +54,7 @@ func (c *Client) GetAllStreams(ctx context.Context, input tsntypes.GetAllStreams
 	return streamLocators, nil
 }
 
-func (c *Client) GetAllInitializedStreams(ctx context.Context, input tsntypes.GetAllStreamsInput) ([]tsntypes.StreamLocator, error) {
+func (c *Client) GetAllInitializedStreams(ctx context.Context, input tntypes.GetAllStreamsInput) ([]tntypes.StreamLocator, error) {
 	kwilClient := c.GetKwilClient()
 
 	// get all deployed contracts
@@ -64,7 +64,7 @@ func (c *Client) GetAllInitializedStreams(ctx context.Context, input tsntypes.Ge
 	}
 
 	// create a list of stream locators
-	streamLocators := make([]tsntypes.StreamLocator, 0)
+	streamLocators := make([]tntypes.StreamLocator, 0)
 
 	// iterate over all contracts
 	// if the contract is a stream, add it to the list
@@ -88,7 +88,7 @@ func (c *Client) GetAllInitializedStreams(ctx context.Context, input tsntypes.Ge
 				return nil, errors.WithStack(err)
 			}
 
-			streamLocator := tsntypes.StreamLocator{
+			streamLocator := tntypes.StreamLocator{
 				StreamId:     *streamId,
 				DataProvider: dataProvider,
 			}

@@ -1,10 +1,10 @@
-# Types of Streams in TSN
+# Types of Streams in TN
 
-The Truflation Stream Network (TSN) primarily supports two types of streams: Primitive and Composed. Additionally, both types can become System streams when accepted by the TSN governance.
+The Truf Network (TN) primarily supports two types of streams: Primitive and Composed. Additionally, both types can become System streams when accepted by the TN governance.
 
 ## Primitive Streams
 
-Primitive streams are the foundation of the TSN data ecosystem. They represent direct data sources from providers.
+Primitive streams are the foundation of the TN data ecosystem. They represent direct data sources from providers.
 
 ### Key Characteristics:
 
@@ -40,7 +40,7 @@ The composed stream contract implements a weighting mechanism for child streams 
 
 ## System Streams
 
-System streams are streams (either Primitive or Composed) that have been audited and accepted by TSN governance to ensure quality and reliability.
+System streams are streams (either Primitive or Composed) that have been audited and accepted by TN governance to ensure quality and reliability.
 
 ### Key Characteristics:
 
@@ -58,7 +58,7 @@ When a stream is accepted as a system stream:
 
 - The original data provider can still push primitives to the stream.
 - The data provider cannot drop the stream or modify its taxonomy.
-- Ownership of the stream is transferred to the TSN governance.
+- Ownership of the stream is transferred to the TN governance.
 - Any future changes to the stream are decided by the community through governance processes.
 
 ### Examples:
@@ -69,15 +69,15 @@ When a stream is accepted as a system stream:
 
 ## Stream Customization and Composability
 
-While TSN provides suggested contract templates for each stream type, users can alter contract logic as long as the procedure interfaces are maintained. This approach ensures:
+While TN provides suggested contract templates for each stream type, users can alter contract logic as long as the procedure interfaces are maintained. This approach ensures:
 
 1. **Flexibility**: Users can implement custom logic tailored to their specific use cases.
-2. **Composability**: Streams remain interoperable within the TSN ecosystem by maintaining consistent interfaces.
-3. **Innovation**: Developers can create novel data products while leveraging the TSN infrastructure.
+2. **Composability**: Streams remain interoperable within the TN ecosystem by maintaining consistent interfaces.
+3. **Innovation**: Developers can create novel data products while leveraging the TN infrastructure.
 
 ### Important Considerations:
 
-- Maintain the defined procedure interfaces to ensure compatibility with the TSN ecosystem.
+- Maintain the defined procedure interfaces to ensure compatibility with the TN ecosystem.
 - Custom logic should adhere to best practices for security and efficiency.
 - Consider the impact of customizations on stream composability and usability by other network participants.
 
@@ -86,9 +86,9 @@ While TSN provides suggested contract templates for each stream type, users can 
 System streams undergo a rigorous process to ensure their reliability and trustworthiness:
 
 1. **Proposal**: Data providers submit their streams for consideration as system streams.
-2. **Audit**: TSN governance thoroughly audits the stream's data sources, methodology, and contract logic.
-3. **Community Review**: The TSN community reviews and provides feedback on proposed system streams.
+2. **Audit**: TN governance thoroughly audits the stream's data sources, methodology, and contract logic.
+3. **Community Review**: The TN community reviews and provides feedback on proposed system streams.
 4. **Acceptance**: Upon passing audits and community review, streams are accepted as system streams.
 5. **Ongoing Monitoring**: System streams are subject to continuous monitoring and periodic reviews to maintain their status.
 
-By leveraging these different stream types and understanding their characteristics, developers and data providers can create powerful, composable data solutions within the TSN ecosystem.
+By leveraging these different stream types and understanding their characteristics, developers and data providers can create powerful, composable data solutions within the TN ecosystem.

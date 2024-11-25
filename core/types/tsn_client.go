@@ -4,12 +4,12 @@ import (
 	"context"
 	kwilClientPkg "github.com/kwilteam/kwil-db/core/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
-	"github.com/truflation/tsn-sdk/core/util"
+	"github.com/trufnetwork/truf-node-sdk-go/core/util"
 	"time"
 )
 
 type Client interface {
-	// WaitForTx waits for the transaction to be mined by TSN
+	// WaitForTx waits for the transaction to be mined by TN
 	WaitForTx(ctx context.Context, txHash transactions.TxHash, interval time.Duration) (*transactions.TcTxQueryResponse, error)
 	// GetKwilClient returns the kwil client used by the client
 	GetKwilClient() *kwilClientPkg.Client
@@ -30,9 +30,9 @@ type Client interface {
 	OwnStreamLocator(streamId util.StreamId) StreamLocator
 	// Address of the signer used by the client
 	Address() util.EthereumAddress
-	// GetAllStreams returns all streams from the TSN network
+	// GetAllStreams returns all streams from the Truf network
 	GetAllStreams(ctx context.Context, input GetAllStreamsInput) ([]StreamLocator, error)
-	// GetAllInitializedStreams returns all streams from the TSN network that are initialized
+	// GetAllInitializedStreams returns all streams from the Truf Network that are initialized
 	GetAllInitializedStreams(ctx context.Context, input GetAllStreamsInput) ([]StreamLocator, error)
 	// DeployComposedStreamWithTaxonomy deploys a composed stream with a taxonomy
 	DeployComposedStreamWithTaxonomy(ctx context.Context, streamId util.StreamId, taxonomy Taxonomy) error

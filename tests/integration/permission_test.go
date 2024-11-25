@@ -7,13 +7,13 @@ import (
 	"github.com/kwilteam/kwil-db/core/crypto"
 	"github.com/kwilteam/kwil-db/core/crypto/auth"
 	"github.com/stretchr/testify/assert"
-	"github.com/truflation/tsn-sdk/core/tsnclient"
-	"github.com/truflation/tsn-sdk/core/types"
-	"github.com/truflation/tsn-sdk/core/util"
+	"github.com/trufnetwork/truf-node-sdk-go/core/tnclient"
+	"github.com/trufnetwork/truf-node-sdk-go/core/types"
+	"github.com/trufnetwork/truf-node-sdk-go/core/util"
 	"testing"
 )
 
-// TestPermissions demonstrates the deployment and permission management of primitive and composed streams in TSN.
+// TestPermissions demonstrates the deployment and permission management of primitive and composed streams in TN.
 func TestPermissions(t *testing.T) {
 	ctx := context.Background()
 
@@ -22,7 +22,7 @@ func TestPermissions(t *testing.T) {
 	ownerPk, err := crypto.Secp256k1PrivateKeyFromHex(TestPrivateKey)
 	assertNoErrorOrFail(t, err, "Failed to parse private key")
 	streamOwnerSigner := &auth.EthPersonalSigner{Key: *ownerPk}
-	ownerTsnClient, err := tsnclient.NewClient(ctx, TestKwilProvider, tsnclient.WithSigner(streamOwnerSigner))
+	ownerTnClient, err := tnclient.NewClient(ctx, TestKwilProvider, tnclient.WithSigner(streamOwnerSigner))
 	assertNoErrorOrFail(t, err, "Failed to create client")
 
 	// Set up reader assets
@@ -32,25 +32,25 @@ func TestPermissions(t *testing.T) {
 	readerSigner := &auth.EthPersonalSigner{Key: *readerPk}
 	readerAddress, err := util.NewEthereumAddressFromBytes(readerSigner.Identity())
 	assertNoErrorOrFail(t, err, "Failed to create signer address")
-	readerTsnClient, err := tsnclient.NewClient(ctx, TestKwilProvider, tsnclient.WithSigner(readerSigner))
+	readerTnClient, err := tnclient.NewClient(ctx, TestKwilProvider, tnclient.WithSigner(readerSigner))
 	assertNoErrorOrFail(t, err, "Failed to create client")
 
 	// Generate unique stream IDs for primitive and composed streams
 	primitiveStreamId := util.GenerateStreamId("test-wallet-permission-primitive-stream")
 	composedStreamId := util.GenerateStreamId("test-wallet-permission-composed-stream")
 
-	primitiveStreamLocator := ownerTsnClient.OwnStreamLocator(primitiveStreamId)
-	composedStreamLocator := ownerTsnClient.OwnStreamLocator(composedStreamId)
+	primitiveStreamLocator := ownerTnClient.OwnStreamLocator(primitiveStreamId)
+	composedStreamLocator := ownerTnClient.OwnStreamLocator(composedStreamId)
 
 	// Set up cleanup to destroy the primitive stream after test completion
 	t.Cleanup(func() {
-		destroyResult, err := ownerTsnClient.DestroyStream(ctx, primitiveStreamId)
+		destroyResult, err := ownerTnClient.DestroyStream(ctx, primitiveStreamId)
 		assertNoErrorOrFail(t, err, "Failed to destroy stream")
-		waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, destroyResult)
+		waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, destroyResult)
 	})
 
 	// Deploy a primitive stream with initial data
-	deployTestPrimitiveStreamWithData(t, ctx, ownerTsnClient, primitiveStreamId, []types.InsertRecordInput{
+	deployTestPrimitiveStreamWithData(t, ctx, ownerTnClient, primitiveStreamId, []types.InsertRecordInput{
 		{
 			Value:     1,
 			DateValue: civil.Date{Year: 2020, Month: 1, Day: 1},
@@ -65,9 +65,9 @@ func TestPermissions(t *testing.T) {
 	}
 
 	// Load the primitive stream for both owner and reader
-	ownerPrimitiveStream, err := ownerTsnClient.LoadPrimitiveStream(primitiveStreamLocator)
+	ownerPrimitiveStream, err := ownerTnClient.LoadPrimitiveStream(primitiveStreamLocator)
 	assertNoErrorOrFail(t, err, "Failed to load stream")
-	readerPrimitiveStream, err := readerTsnClient.LoadPrimitiveStream(primitiveStreamLocator)
+	readerPrimitiveStream, err := readerTnClient.LoadPrimitiveStream(primitiveStreamLocator)
 	assertNoErrorOrFail(t, err, "Failed to load stream")
 
 	// Define input for reading records
@@ -87,7 +87,7 @@ func TestPermissions(t *testing.T) {
 			txHash, err := ownerPrimitiveStream.DisableReadWallet(ctx, readerAddress)
 			assertNoErrorOrFail(t, err, "Failed to disable read wallet")
 
-			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash) // only wait the final tx
+			waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, txHash) // only wait the final tx
 		})
 
 		// ok - public read
@@ -98,7 +98,7 @@ func TestPermissions(t *testing.T) {
 		// set the stream to private
 		txHash, err := ownerPrimitiveStream.SetReadVisibility(ctx, util.PrivateVisibility)
 		assertNoErrorOrFail(t, err, "Failed to set read visibility")
-		waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
+		waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, txHash)
 
 		// ok - private being owner
 		// read the stream
@@ -114,7 +114,7 @@ func TestPermissions(t *testing.T) {
 		// allow read access to the reader
 		txHash, err = ownerPrimitiveStream.AllowReadWallet(ctx, readerAddress)
 		assertNoErrorOrFail(t, err, "Failed to allow read wallet")
-		waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
+		waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, txHash)
 
 		// read the stream
 		rec, err = readerPrimitiveStream.GetRecord(ctx, readInput)
@@ -126,13 +126,13 @@ func TestPermissions(t *testing.T) {
 	t.Run("TestComposedStream", func(t *testing.T) {
 		// Set up cleanup to destroy the composed stream after test completion
 		t.Cleanup(func() {
-			destroyResult, err := ownerTsnClient.DestroyStream(ctx, composedStreamId)
+			destroyResult, err := ownerTnClient.DestroyStream(ctx, composedStreamId)
 			assert.NoError(t, err, "Failed to destroy stream")
-			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, destroyResult)
+			waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, destroyResult)
 		})
 
 		// Deploy a composed stream using the primitive stream as a child
-		deployTestComposedStreamWithTaxonomy(t, ctx, ownerTsnClient, composedStreamId, types.Taxonomy{
+		deployTestComposedStreamWithTaxonomy(t, ctx, ownerTnClient, composedStreamId, types.Taxonomy{
 			TaxonomyItems: []types.TaxonomyItem{
 				{
 					ChildStream: primitiveStreamLocator,
@@ -141,9 +141,9 @@ func TestPermissions(t *testing.T) {
 			}})
 
 		// Load the composed stream for both owner and reader
-		ownerComposedStream, err := ownerTsnClient.LoadComposedStream(ownerTsnClient.OwnStreamLocator(composedStreamId))
+		ownerComposedStream, err := ownerTnClient.LoadComposedStream(ownerTnClient.OwnStreamLocator(composedStreamId))
 		assertNoErrorOrFail(t, err, "Failed to load stream")
-		readerComposedStream, err := readerTsnClient.LoadComposedStream(ownerTsnClient.OwnStreamLocator(composedStreamId))
+		readerComposedStream, err := readerTnClient.LoadComposedStream(ownerTnClient.OwnStreamLocator(composedStreamId))
 		assertNoErrorOrFail(t, err, "Failed to load stream")
 
 		// Test wallet read permissions for the composed stream
@@ -164,7 +164,7 @@ func TestPermissions(t *testing.T) {
 				txHash, err = ownerPrimitiveStream.DisableReadWallet(ctx, readerAddress)
 				assert.NoError(t, err, "Failed to disable read wallet")
 
-				waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash) // only wait the final tx
+				waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, txHash) // only wait the final tx
 			})
 
 			// ok all public
@@ -175,7 +175,7 @@ func TestPermissions(t *testing.T) {
 			// set just the composed stream to private
 			txHash, err := ownerComposedStream.SetReadVisibility(ctx, util.PrivateVisibility)
 			assertNoErrorOrFail(t, err, "Failed to set read visibility")
-			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
+			waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, txHash)
 
 			// fail - composed stream is private without access
 			_, err = readerComposedStream.GetRecord(ctx, readInput)
@@ -184,12 +184,12 @@ func TestPermissions(t *testing.T) {
 			// set the stream to public
 			txHash, err = ownerComposedStream.SetReadVisibility(ctx, util.PublicVisibility)
 			assertNoErrorOrFail(t, err, "Failed to set read visibility")
-			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
+			waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, txHash)
 
 			// set the child stream to private
 			txHash, err = ownerPrimitiveStream.SetReadVisibility(ctx, util.PrivateVisibility)
 			assertNoErrorOrFail(t, err, "Failed to set read visibility")
-			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
+			waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, txHash)
 			fmt.Println("set private")
 
 			// fail - child is private without access
@@ -199,7 +199,7 @@ func TestPermissions(t *testing.T) {
 			// allow read access to the reader
 			txHash, err = ownerPrimitiveStream.AllowReadWallet(ctx, readerAddress)
 			assertNoErrorOrFail(t, err, "Failed to allow read wallet")
-			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
+			waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, txHash)
 
 			// ok - primitive private but w/ access
 			rec, err = readerComposedStream.GetRecord(ctx, readInput)
@@ -209,12 +209,12 @@ func TestPermissions(t *testing.T) {
 			// set the composed stream to private
 			txHash, err = ownerComposedStream.SetReadVisibility(ctx, util.PrivateVisibility)
 			assertNoErrorOrFail(t, err, "Failed to set read visibility")
-			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
+			waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, txHash)
 
 			// allow read access to the reader
 			txHash, err = ownerComposedStream.AllowReadWallet(ctx, readerAddress)
 			assertNoErrorOrFail(t, err, "Failed to allow read wallet")
-			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
+			waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, txHash)
 
 			// ok - all private but w/ access
 			rec, err = readerComposedStream.GetRecord(ctx, readInput)
@@ -233,7 +233,7 @@ func TestPermissions(t *testing.T) {
 				txHash, err = ownerPrimitiveStream.DisableComposeStream(ctx, composedStreamLocator)
 				assert.NoError(t, err, "Failed to disable compose stream")
 
-				waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash) // only wait the final tx
+				waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, txHash) // only wait the final tx
 			})
 
 			// ok - public compose
@@ -244,7 +244,7 @@ func TestPermissions(t *testing.T) {
 			// set the stream to private
 			txHash, err := ownerPrimitiveStream.SetComposeVisibility(ctx, util.PrivateVisibility)
 			assertNoErrorOrFail(t, err, "Failed to set compose visibility")
-			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
+			waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, txHash)
 
 			// ok - reading primitive directly
 			rec, err = readerPrimitiveStream.GetRecord(ctx, readInput)
@@ -259,7 +259,7 @@ func TestPermissions(t *testing.T) {
 			// allow compose access to the reader
 			txHash, err = ownerPrimitiveStream.AllowComposeStream(ctx, composedStreamLocator)
 			assertNoErrorOrFail(t, err, "Failed to allow compose stream")
-			waitTxToBeMinedWithSuccess(t, ctx, ownerTsnClient, txHash)
+			waitTxToBeMinedWithSuccess(t, ctx, ownerTnClient, txHash)
 
 			// read the stream
 			rec, err = readerComposedStream.GetRecord(ctx, readInput)

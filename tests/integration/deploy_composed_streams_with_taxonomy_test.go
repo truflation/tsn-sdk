@@ -6,9 +6,9 @@ import (
 	"github.com/kwilteam/kwil-db/core/crypto"
 	"github.com/kwilteam/kwil-db/core/crypto/auth"
 	"github.com/stretchr/testify/assert"
-	"github.com/truflation/tsn-sdk/core/tsnclient"
-	"github.com/truflation/tsn-sdk/core/types"
-	"github.com/truflation/tsn-sdk/core/util"
+	"github.com/trufnetwork/truf-node-sdk-go/core/tnclient"
+	"github.com/trufnetwork/truf-node-sdk-go/core/types"
+	"github.com/trufnetwork/truf-node-sdk-go/core/util"
 	"testing"
 	"time"
 )
@@ -22,7 +22,7 @@ func TestDeployComposedStreamsWithTaxonomy(t *testing.T) {
 
 	// Create a signer using the parsed private key
 	signer := &auth.EthPersonalSigner{Key: *pk}
-	tsnClient, err := tsnclient.NewClient(ctx, TestKwilProvider, tsnclient.WithSigner(signer))
+	tnClient, err := tnclient.NewClient(ctx, TestKwilProvider, tnclient.WithSigner(signer))
 	assertNoErrorOrFail(t, err, "Failed to create client")
 
 	// Generate unique stream IDs and locators
@@ -34,40 +34,40 @@ func TestDeployComposedStreamsWithTaxonomy(t *testing.T) {
 	t.Cleanup(func() {
 		allStreamIds := []util.StreamId{primitiveStreamId, composedStreamId, primitiveStreamId2}
 		for _, id := range allStreamIds {
-			destroyResult, err := tsnClient.DestroyStream(ctx, id)
+			destroyResult, err := tnClient.DestroyStream(ctx, id)
 			assertNoErrorOrFail(t, err, "Failed to destroy stream")
-			waitTxToBeMinedWithSuccess(t, ctx, tsnClient, destroyResult)
+			waitTxToBeMinedWithSuccess(t, ctx, tnClient, destroyResult)
 		}
 	})
 
 	// Deploy a primitive stream
-	deployTxHash, err := tsnClient.DeployStream(ctx, primitiveStreamId, types.StreamTypePrimitive)
+	deployTxHash, err := tnClient.DeployStream(ctx, primitiveStreamId, types.StreamTypePrimitive)
 	assertNoErrorOrFail(t, err, "Failed to deploy primitive stream")
-	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, deployTxHash)
+	waitTxToBeMinedWithSuccess(t, ctx, tnClient, deployTxHash)
 
 	// Deploy a second primitive stream
-	deployTxHash, err = tsnClient.DeployStream(ctx, primitiveStreamId2, types.StreamTypePrimitive)
+	deployTxHash, err = tnClient.DeployStream(ctx, primitiveStreamId2, types.StreamTypePrimitive)
 	assertNoErrorOrFail(t, err, "Failed to deploy primitive stream")
-	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, deployTxHash)
+	waitTxToBeMinedWithSuccess(t, ctx, tnClient, deployTxHash)
 
 	// Deploy a composed stream using utility function
-	err = tsnClient.DeployComposedStreamWithTaxonomy(ctx, composedStreamId, types.Taxonomy{
+	err = tnClient.DeployComposedStreamWithTaxonomy(ctx, composedStreamId, types.Taxonomy{
 		TaxonomyItems: []types.TaxonomyItem{
 			{
-				ChildStream: tsnClient.OwnStreamLocator(primitiveStreamId),
+				ChildStream: tnClient.OwnStreamLocator(primitiveStreamId),
 				Weight:      50,
 			},
 			{
-				ChildStream: tsnClient.OwnStreamLocator(primitiveStreamId2),
+				ChildStream: tnClient.OwnStreamLocator(primitiveStreamId2),
 				Weight:      50,
 			},
 		},
 	})
 	assertNoErrorOrFail(t, err, "Failed to deploy composed stream")
-	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, deployTxHash)
+	waitTxToBeMinedWithSuccess(t, ctx, tnClient, deployTxHash)
 
 	// List all streams
-	streams, err := tsnClient.GetAllStreams(ctx, types.GetAllStreamsInput{})
+	streams, err := tnClient.GetAllStreams(ctx, types.GetAllStreamsInput{})
 	assertNoErrorOrFail(t, err, "Failed to list all streams")
 
 	// Check that only the primitive and composed streams are listed
@@ -88,13 +88,13 @@ func TestDeployComposedStreamsWithTaxonomy(t *testing.T) {
 
 	// insert a record to primitiveStreamId and primitiveStreamId2
 	// Load the primitive stream
-	primitiveStream, err := tsnClient.LoadPrimitiveStream(tsnClient.OwnStreamLocator(primitiveStreamId))
+	primitiveStream, err := tnClient.LoadPrimitiveStream(tnClient.OwnStreamLocator(primitiveStreamId))
 	assertNoErrorOrFail(t, err, "Failed to load primitive stream")
 
 	// Initialize the stream primitiveStreamId
 	initTxHash, err := primitiveStream.InitializeStream(ctx)
 	assertNoErrorOrFail(t, err, "Failed to initialize stream")
-	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, initTxHash)
+	waitTxToBeMinedWithSuccess(t, ctx, tnClient, initTxHash)
 
 	// insert a record to primitiveStreamId
 	insertTxHash, err := primitiveStream.InsertRecords(ctx, []types.InsertRecordInput{
@@ -104,16 +104,16 @@ func TestDeployComposedStreamsWithTaxonomy(t *testing.T) {
 		},
 	})
 	assertNoErrorOrFail(t, err, "Failed to insert record")
-	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, insertTxHash)
+	waitTxToBeMinedWithSuccess(t, ctx, tnClient, insertTxHash)
 
 	// Load the second primitive stream
-	primitiveStream2, err := tsnClient.LoadPrimitiveStream(tsnClient.OwnStreamLocator(primitiveStreamId2))
+	primitiveStream2, err := tnClient.LoadPrimitiveStream(tnClient.OwnStreamLocator(primitiveStreamId2))
 	assertNoErrorOrFail(t, err, "Failed to load primitive stream")
 
 	// Initialize the stream primitiveStreamId2
 	initTxHash, err = primitiveStream2.InitializeStream(ctx)
 	assertNoErrorOrFail(t, err, "Failed to initialize stream")
-	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, initTxHash)
+	waitTxToBeMinedWithSuccess(t, ctx, tnClient, initTxHash)
 
 	// insert a record to primitiveStreamId2
 	insertTxHash, err = primitiveStream2.InsertRecords(ctx, []types.InsertRecordInput{
@@ -123,10 +123,10 @@ func TestDeployComposedStreamsWithTaxonomy(t *testing.T) {
 		},
 	})
 	assertNoErrorOrFail(t, err, "Failed to insert record")
-	waitTxToBeMinedWithSuccess(t, ctx, tsnClient, insertTxHash)
+	waitTxToBeMinedWithSuccess(t, ctx, tnClient, insertTxHash)
 
 	// Load the composed stream
-	composedStream, err := tsnClient.LoadComposedStream(tsnClient.OwnStreamLocator(composedStreamId))
+	composedStream, err := tnClient.LoadComposedStream(tnClient.OwnStreamLocator(composedStreamId))
 	assertNoErrorOrFail(t, err, "Failed to load composed stream")
 
 	// Get records from the composed stream
@@ -140,10 +140,10 @@ func TestDeployComposedStreamsWithTaxonomy(t *testing.T) {
 	////
 
 	// Deploy a composed stream with a non-existent child stream
-	err = tsnClient.DeployComposedStreamWithTaxonomy(ctx, composedStreamId, types.Taxonomy{
+	err = tnClient.DeployComposedStreamWithTaxonomy(ctx, composedStreamId, types.Taxonomy{
 		TaxonomyItems: []types.TaxonomyItem{
 			{
-				ChildStream: tsnClient.OwnStreamLocator(util.GenerateStreamId("non-existent-stream")),
+				ChildStream: tnClient.OwnStreamLocator(util.GenerateStreamId("non-existent-stream")),
 				Weight:      50,
 			},
 		},
@@ -151,6 +151,6 @@ func TestDeployComposedStreamsWithTaxonomy(t *testing.T) {
 	assert.Error(t, err, "Expected error when deploying composed stream with non-existent child stream")
 
 	// Deploy a composed stream with already deployed stream
-	err = tsnClient.DeployComposedStreamWithTaxonomy(ctx, composedStreamId, types.Taxonomy{})
+	err = tnClient.DeployComposedStreamWithTaxonomy(ctx, composedStreamId, types.Taxonomy{})
 	assert.Error(t, err, "Expected error when deploying already deployed stream")
 }
