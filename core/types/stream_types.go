@@ -1,6 +1,6 @@
 package types
 
-import "github.com/trufnetwork/truf-node-sdk-go/core/util"
+import "github.com/trufnetwork/sdk-go/core/util"
 
 // StreamLocator is a struct that contains the StreamId and the DataProvider
 type StreamLocator struct {

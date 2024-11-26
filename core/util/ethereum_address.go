@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
-	"github.com/trufnetwork/truf-node-sdk-go/core/logging"
+	"github.com/trufnetwork/sdk-go/core/logging"
 	"go.uber.org/zap"
 	"regexp"
 	"strings"

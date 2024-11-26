@@ -9,8 +9,8 @@ import (
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	kwilUtils "github.com/kwilteam/kwil-db/core/utils"
 	"github.com/pkg/errors"
-	tntypes "github.com/trufnetwork/truf-node-sdk-go/core/types"
-	"github.com/trufnetwork/truf-node-sdk-go/core/util"
+	tntypes "github.com/trufnetwork/sdk-go/core/types"
+	"github.com/trufnetwork/sdk-go/core/util"
 	"strings"
 )
 

@@ -4,7 +4,7 @@ The Truf Node SDK provides developers with tools to interact with the Truf Netwo
 
 ## Support
 
-This documentation is a work in progress. If you need help, don't hesitate to [open an issue](https://github.com/trufnetwork/truf-node-sdk-go/issues).
+This documentation is a work in progress. If you need help, don't hesitate to [open an issue](https://github.com/trufnetwork/sdk-go/issues).
 
 ## Quick Start
 
@@ -15,7 +15,7 @@ This documentation is a work in progress. If you need help, don't hesitate to [o
 ### Installation
 
 ```bash
-go get github.com/trufnetwork/truf-node-sdk-go
+go get github.com/trufnetwork/sdk-go
 
 ```
 
@@ -30,9 +30,9 @@ import (
 	"github.com/golang-sql/civil"
 	"github.com/kwilteam/kwil-db/core/crypto"
 	"github.com/kwilteam/kwil-db/core/crypto/auth"
-	"github.com/trufnetwork/truf-node-sdk-go/core/tnclient"
-	"github.com/trufnetwork/truf-node-sdk-go/core/types"
-	"github.com/trufnetwork/truf-node-sdk-go/core/util"
+	"github.com/trufnetwork/sdk-go/core/tnclient"
+	"github.com/trufnetwork/sdk-go/core/types"
+	"github.com/trufnetwork/sdk-go/core/util"
 )
 
 func main() {
@@ -121,8 +121,8 @@ TN supports granular control over stream access and visibility. Streams can be p
 - [TN-SDK Documentation](./docs/readme.md)
 - [Truflation Whitepaper](https://whitepaper.truflation.com/)
 
-For additional support or questions, please [open an issue](https://github.com/trufnetwork/truf-node-sdk-go/issues) or contact our support team.
+For additional support or questions, please [open an issue](https://github.com/trufnetwork/sdk-go/issues) or contact our support team.
 
 ## License
 
-The Truf-Node-SDK-Go repository is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE.md) for more details.
+The SDK-Go repository is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE.md) for more details.

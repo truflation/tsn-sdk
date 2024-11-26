@@ -4,9 +4,9 @@ import (
 	"context"
 	kwiltypes "github.com/kwilteam/kwil-db/core/types"
 	"github.com/pkg/errors"
-	"github.com/trufnetwork/truf-node-sdk-go/core/logging"
-	tntypes "github.com/trufnetwork/truf-node-sdk-go/core/types"
-	"github.com/trufnetwork/truf-node-sdk-go/core/util"
+	"github.com/trufnetwork/sdk-go/core/logging"
+	tntypes "github.com/trufnetwork/sdk-go/core/types"
+	"github.com/trufnetwork/sdk-go/core/util"
 	"go.uber.org/zap"
 )
 

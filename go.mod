@@ -1,4 +1,4 @@
-module github.com/trufnetwork/truf-node-sdk-go
+module github.com/trufnetwork/sdk-go
 
 go 1.22.1
 

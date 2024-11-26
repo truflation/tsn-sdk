@@ -6,9 +6,9 @@ import (
 	"github.com/kwilteam/kwil-db/core/crypto"
 	"github.com/kwilteam/kwil-db/core/crypto/auth"
 	"github.com/stretchr/testify/assert"
-	"github.com/trufnetwork/truf-node-sdk-go/core/tnclient"
-	"github.com/trufnetwork/truf-node-sdk-go/core/types"
-	"github.com/trufnetwork/truf-node-sdk-go/core/util"
+	"github.com/trufnetwork/sdk-go/core/tnclient"
+	"github.com/trufnetwork/sdk-go/core/types"
+	"github.com/trufnetwork/sdk-go/core/util"
 	"testing"
 	"time"
 )

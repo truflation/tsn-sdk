@@ -7,10 +7,10 @@ import (
 	"github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/parse"
 	"github.com/stretchr/testify/assert"
-	"github.com/trufnetwork/truf-node-sdk-go/core/tnclient"
-	"github.com/trufnetwork/truf-node-sdk-go/core/types"
-	"github.com/trufnetwork/truf-node-sdk-go/core/util"
-	"github.com/trufnetwork/truf-node-sdk-go/tests/integration/assets"
+	"github.com/trufnetwork/sdk-go/core/tnclient"
+	"github.com/trufnetwork/sdk-go/core/types"
+	"github.com/trufnetwork/sdk-go/core/util"
+	"github.com/trufnetwork/sdk-go/tests/integration/assets"
 	"testing"
 )
 

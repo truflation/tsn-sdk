@@ -5,7 +5,7 @@ import (
 	"github.com/kwilteam/kwil-db/core/types/client"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/pkg/errors"
-	"github.com/trufnetwork/truf-node-sdk-go/core/util"
+	"github.com/trufnetwork/sdk-go/core/util"
 )
 import "github.com/go-playground/validator/v10"
 
