@@ -315,7 +315,7 @@ procedure insert_record($date_value text, $value decimal(36,18)) public {
         VALUES ($date_value, $value, $current_block);
 }
 
-// Truflations calculation is ((current_primitive/first_primitive)*100).
+// get_index calculation is ((current_primitive/first_primitive)*100).
 // This essentially gives us the same result, but with an extra 3 digits of precision.
 // index := (currentPrimitive * 100) / basePrimitive
 procedure get_index($date_from text, $date_to text, $frozen_at int, $base_date text) public view returns table(

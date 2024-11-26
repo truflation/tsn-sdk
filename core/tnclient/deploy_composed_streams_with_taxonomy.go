@@ -1,11 +1,11 @@
-package tsnclient
+package tnclient
 
 import (
 	"context"
 	"github.com/pkg/errors"
-	"github.com/truflation/tsn-sdk/core/logging"
-	"github.com/truflation/tsn-sdk/core/types"
-	"github.com/truflation/tsn-sdk/core/util"
+	"github.com/trufnetwork/sdk-go/core/logging"
+	"github.com/trufnetwork/sdk-go/core/types"
+	"github.com/trufnetwork/sdk-go/core/util"
 	"go.uber.org/zap"
 	"time"
 )

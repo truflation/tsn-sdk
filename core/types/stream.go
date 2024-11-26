@@ -7,7 +7,7 @@ import (
 	"github.com/cockroachdb/apd/v3"
 	"github.com/golang-sql/civil"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
-	"github.com/truflation/tsn-sdk/core/util"
+	"github.com/trufnetwork/sdk-go/core/util"
 )
 
 type GetRecordInput struct {

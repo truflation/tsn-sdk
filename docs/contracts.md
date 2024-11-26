@@ -1,14 +1,14 @@
-# Default Contracts in TSN
+# Default Contracts in TN
 
-The Truflation Stream Network (TSN) uses [kuneiform data contracts](https://docs.kwil.com/docs/kuneiform/introduction) to manage data streams. This document explains the default contracts for primitive and composed streams, their customization potential, and key features.
+The Truf Network (TN) uses [kuneiform data contracts](https://docs.kwil.com/docs/kuneiform/introduction) to manage data streams. This document explains the default contracts for primitive and composed streams, their customization potential, and key features.
 
-You can find the default contracts in the `core/contracts` directory of the TSN SDK.
+You can find the default contracts in the `core/contracts` directory of the TN SDK.
 
 ## Contract Customization
 
 - Data providers can modify the logic of primitive and composed stream contracts to implement different methodologies for data calculation and composition.
-- The interfaces between contracts (e.g., `get_index`, `get_record`) and the permissions logic must remain unchanged to ensure compatibility within the TSN ecosystem.
-- While the TSN SDK is not yet fully prepared for contract modifications, users with the necessary expertise can implement custom logic. Future updates to the SDK will enhance support for customized contracts.
+- The interfaces between contracts (e.g., `get_index`, `get_record`) and the permissions logic must remain unchanged to ensure compatibility within the TN ecosystem.
+- While the TN SDK is not yet fully prepared for contract modifications, users with the necessary expertise can implement custom logic. Future updates to the SDK will enhance support for customized contracts.
 
 ## Metadata Management
 
@@ -50,6 +50,6 @@ While this default logic suits many scenarios, data providers may customize it t
 
 ## Future Customization Support
 
-The TSN team is working on enhancing the SDK to better support contract customization. This will enable data providers to more easily implement unique data methodologies while maintaining compatibility with the TSN ecosystem.
+The TN team is working on enhancing the SDK to better support contract customization. This will enable data providers to more easily implement unique data methodologies while maintaining compatibility with the TN ecosystem.
 
 Until then, advanced users can modify contract logic directly, ensuring they maintain the required interfaces and permission structures.

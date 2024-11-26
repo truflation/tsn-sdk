@@ -1,4 +1,4 @@
-module github.com/truflation/tsn-sdk
+module github.com/trufnetwork/sdk-go
 
 go 1.22.1
 

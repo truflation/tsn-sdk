@@ -9,8 +9,8 @@ import (
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	kwilUtils "github.com/kwilteam/kwil-db/core/utils"
 	"github.com/pkg/errors"
-	tsntypes "github.com/truflation/tsn-sdk/core/types"
-	"github.com/truflation/tsn-sdk/core/util"
+	tntypes "github.com/trufnetwork/sdk-go/core/types"
+	"github.com/trufnetwork/sdk-go/core/util"
 	"strings"
 )
 
@@ -18,7 +18,7 @@ import (
 
 type Stream struct {
 	StreamId     util.StreamId
-	_type        tsntypes.StreamType
+	_type        tntypes.StreamType
 	_deployer    []byte
 	_owner       []byte
 	DBID         string
@@ -27,7 +27,7 @@ type Stream struct {
 	_deployed    bool
 }
 
-var _ tsntypes.IStream = (*Stream)(nil)
+var _ tntypes.IStream = (*Stream)(nil)
 
 type NewStreamOptions struct {
 	Client   client.Client
@@ -108,7 +108,7 @@ func (s *Stream) GetSchema(ctx context.Context) (*types.Schema, error) {
 	return s._client.GetSchema(ctx, s.DBID)
 }
 
-func (s *Stream) GetType(ctx context.Context) (tsntypes.StreamType, error) {
+func (s *Stream) GetType(ctx context.Context) (tntypes.StreamType, error) {
 	if s._type != "" {
 		return s._type, nil
 	}
@@ -128,9 +128,9 @@ func (s *Stream) GetType(ctx context.Context) (tsntypes.StreamType, error) {
 
 	switch values[0].ValueS {
 	case "composed":
-		s._type = tsntypes.StreamTypeComposed
+		s._type = tntypes.StreamTypeComposed
 	case "primitive":
-		s._type = tsntypes.StreamTypePrimitive
+		s._type = tntypes.StreamTypePrimitive
 	default:
 		return "", errors.New(fmt.Sprintf("unknown stream type: %s", values[0].ValueS))
 	}

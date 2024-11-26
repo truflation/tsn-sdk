@@ -5,19 +5,19 @@ import (
 	"github.com/kwilteam/kwil-db/core/crypto"
 	"github.com/kwilteam/kwil-db/core/crypto/auth"
 	"github.com/stretchr/testify/assert"
-	"github.com/truflation/tsn-sdk/core/tsnclient"
-	"github.com/truflation/tsn-sdk/core/types"
-	"github.com/truflation/tsn-sdk/core/util"
+	"github.com/trufnetwork/sdk-go/core/tnclient"
+	"github.com/trufnetwork/sdk-go/core/types"
+	"github.com/trufnetwork/sdk-go/core/util"
 	"testing"
 	"time"
 )
 
-// This file contains integration tests for composed streams in the Truflation Stream Network (TSN).
+// This file contains integration tests for composed streams in the Truf Network (TN).
 // It demonstrates the process of deploying, initializing, and querying a composed stream
 // that aggregates data from multiple primitive streams.
 
 // TestComposedStream demonstrates the process of deploying, initializing, and querying
-// a composed stream that aggregates data from multiple primitive streams in the TSN using the TSN SDK.
+// a composed stream that aggregates data from multiple primitive streams in the TN using the TN SDK.
 func TestComposedStream(t *testing.T) {
 	ctx := context.Background()
 
@@ -27,7 +27,7 @@ func TestComposedStream(t *testing.T) {
 
 	// Create a signer using the parsed private key
 	signer := &auth.EthPersonalSigner{Key: *pk}
-	tsnClient, err := tsnclient.NewClient(ctx, TestKwilProvider, tsnclient.WithSigner(signer))
+	tnClient, err := tnclient.NewClient(ctx, TestKwilProvider, tnclient.WithSigner(signer))
 	assertNoErrorOrFail(t, err, "Failed to create client")
 
 	signerAddress, err := util.NewEthereumAddressFromBytes(signer.Identity())
@@ -35,7 +35,7 @@ func TestComposedStream(t *testing.T) {
 
 	// Generate a unique stream ID and locator for the composed stream and its child streams
 	streamId := util.GenerateStreamId("test-composed-stream")
-	streamLocator := tsnClient.OwnStreamLocator(streamId)
+	streamLocator := tnClient.OwnStreamLocator(streamId)
 
 	childAStreamId := util.GenerateStreamId("test-composed-stream-child-a")
 	childBStreamId := util.GenerateStreamId("test-composed-stream-child-b")
@@ -45,29 +45,29 @@ func TestComposedStream(t *testing.T) {
 	// Cleanup function to destroy the streams after test completion
 	t.Cleanup(func() {
 		for _, id := range allStreamIds {
-			destroyResult, err := tsnClient.DestroyStream(ctx, id)
+			destroyResult, err := tnClient.DestroyStream(ctx, id)
 			assertNoErrorOrFail(t, err, "Failed to destroy stream")
-			waitTxToBeMinedWithSuccess(t, ctx, tsnClient, destroyResult)
+			waitTxToBeMinedWithSuccess(t, ctx, tnClient, destroyResult)
 		}
 	})
 
 	// Subtest for deploying, initializing, and querying the composed stream
 	t.Run("DeploymentAndReadOperations", func(t *testing.T) {
 		// Step 1: Deploy the composed stream
-		// This creates the composed stream contract on the TSN
-		deployTxHash, err := tsnClient.DeployStream(ctx, streamId, types.StreamTypeComposed)
+		// This creates the composed stream contract on the TN
+		deployTxHash, err := tnClient.DeployStream(ctx, streamId, types.StreamTypeComposed)
 		assertNoErrorOrFail(t, err, "Failed to deploy composed stream")
-		waitTxToBeMinedWithSuccess(t, ctx, tsnClient, deployTxHash)
+		waitTxToBeMinedWithSuccess(t, ctx, tnClient, deployTxHash)
 
 		// Load the deployed composed stream
-		deployedComposedStream, err := tsnClient.LoadComposedStream(streamLocator)
+		deployedComposedStream, err := tnClient.LoadComposedStream(streamLocator)
 		assertNoErrorOrFail(t, err, "Failed to load composed stream")
 
 		// Step 2: Initialize the composed stream
 		// Initialization prepares the composed stream for data operations
 		txHashInit, err := deployedComposedStream.InitializeStream(ctx)
 		assertNoErrorOrFail(t, err, "Failed to initialize composed stream")
-		waitTxToBeMinedWithSuccess(t, ctx, tsnClient, txHashInit)
+		waitTxToBeMinedWithSuccess(t, ctx, tnClient, txHashInit)
 
 		// Step 3: Deploy child streams with initial data
 		// Deploy two primitive child streams with initial data
@@ -76,7 +76,7 @@ func TestComposedStream(t *testing.T) {
 		// | 2020-01-01 | 1      | 3      |
 		// | 2020-01-02 | 2      | 4      |
 
-		deployTestPrimitiveStreamWithData(t, ctx, tsnClient, childAStreamId, []types.InsertRecordInput{
+		deployTestPrimitiveStreamWithData(t, ctx, tnClient, childAStreamId, []types.InsertRecordInput{
 			{Value: 1, DateValue: *unsafeParseDate("2020-01-01")},
 			{Value: 2, DateValue: *unsafeParseDate("2020-01-02")},
 			{Value: 3, DateValue: *unsafeParseDate("2020-01-30")},
@@ -84,7 +84,7 @@ func TestComposedStream(t *testing.T) {
 			{Value: 5, DateValue: *unsafeParseDate("2020-02-02")},
 		})
 
-		deployTestPrimitiveStreamWithData(t, ctx, tsnClient, childBStreamId, []types.InsertRecordInput{
+		deployTestPrimitiveStreamWithData(t, ctx, tnClient, childBStreamId, []types.InsertRecordInput{
 			{Value: 3, DateValue: *unsafeParseDate("2020-01-01")},
 			{Value: 4, DateValue: *unsafeParseDate("2020-01-02")},
 			{Value: 5, DateValue: *unsafeParseDate("2020-01-30")},
@@ -113,7 +113,7 @@ func TestComposedStream(t *testing.T) {
 			StartDate: unsafeParseDate("2020-01-30"),
 		})
 		assertNoErrorOrFail(t, err, "Failed to set taxonomies")
-		waitTxToBeMinedWithSuccess(t, ctx, tsnClient, txHashTaxonomies)
+		waitTxToBeMinedWithSuccess(t, ctx, tnClient, txHashTaxonomies)
 
 		// Describe the taxonomies of the composed stream
 		taxonomies, err := deployedComposedStream.DescribeTaxonomies(ctx, types.DescribeTaxonomiesParams{

@@ -1,10 +1,10 @@
-# Stream Permissions in TSN
+# Stream Permissions in TN
 
-The Truflation Stream Network (TSN) provides granular control over stream access and visibility. This document outlines the permission system, how to configure it, and best practices for securing your streams.
+The Truf Network (TN) provides granular control over stream access and visibility. This document outlines the permission system, how to configure it, and best practices for securing your streams.
 
 ## Permission Types
 
-TSN supports two main types of permissions:
+TN supports two main types of permissions:
 
 1. **Read Permissions**: Control who can read data from a stream.
 2. **Compose Permissions**: Determine which streams can use this stream as a child in a composed stream.
@@ -137,4 +137,4 @@ stream.AllowComposeStream(ctx, allowedStreamLocator)
 
 - Changing permissions requires blockchain transactions. Always wait for transaction confirmation before assuming the change has taken effect.
 
-By leveraging these permission controls, you can create secure, flexible data streams that meet your specific needs while maintaining control over your valuable data within the TSN ecosystem.
+By leveraging these permission controls, you can create secure, flexible data streams that meet your specific needs while maintaining control over your valuable data within the TN ecosystem.

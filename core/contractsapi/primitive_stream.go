@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/kwilteam/kwil-db/core/types/transactions"
 	"github.com/pkg/errors"
-	"github.com/truflation/tsn-sdk/core/types"
+	"github.com/trufnetwork/sdk-go/core/types"
 	"strconv"
 )
 
